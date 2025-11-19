@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import App from "./App.jsx";
+import "./styles/globals.css";
 
 import Home from "./pages/Home.jsx";
 import Profile from "./pages/Profile.jsx";
@@ -10,8 +11,7 @@ import Message from "./pages/Message.jsx";
 import Listings from "./pages/Listings.jsx";
 import ListingDetail from "./pages/ListingDetail.jsx";
 import CreateListings from "./pages/CreateListings.jsx";
-import Login from "./pages/Login.jsx";
-import Signup from "./pages/Signup.jsx";
+import Login from "./pages/Login&Signup.jsx";
 import SafeMeetup from "./pages/SafeMeetup.jsx";
 
 import { SearchProvider } from "./context/SearchContext.jsx";
@@ -31,8 +31,7 @@ const router = createBrowserRouter([
       { path: "meetup", element: <SafeMeetup /> },
     ],
   },
-  { path: "/login", element: <Login /> },
-  { path: "/signup", element: <Signup /> },
+  { path: "/login&signup", element: <Login /> },
 ]);
 
 ReactDOM.createRoot(document.getElementById("root")).render(
