@@ -4,145 +4,178 @@ export default function Login() {
   const [isLogin, setIsLogin] = useState(true);
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-300 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <div className="text-blue-500 text-2xl">🛒</div>
-              <div>
-                <h1 className="text-2xl font-bold text-black">Gradslist</h1>
-                <p className="text-xs text-gray-600">Buy. Sell. Go.</p>
-              </div>
-            </div>
-            <div className="relative">
+   
+    <div className="flex flex-col items-center justify-center py-6 px-4">
+    {/* Wrapper for both cards */}
+    <div className="flex flex-col md:flex-row gap-8 w-full max-w-5xl">
+      
+      {/* SIGN IN CARD */}
+      <div className="flex-1 p-6 sm:p-8 rounded-2xl bg-white border border-gray-200 shadow-md">
+        <h1 className="text-slate-900 text-center text-3xl font-semibold">
+          Login
+        </h1>
+        <form className="mt-12 space-y-6">
+          <div>
+            <label className="text-slate-900 text-sm font-medium mb-2 block">
+              User name
+            </label>
+            <div className="relative flex items-center">
               <input
+                name="username"
                 type="text"
-                placeholder="Type here"
-                className="w-96 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+                className="w-full text-slate-900 text-sm border border-slate-300 px-4 py-3 pr-8 rounded-md outline-blue-600"
+                placeholder="Enter user name"
               />
-              <button className="absolute right-3 top-2.5">
-                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </button>
-            </div>
-          </div>
-          <nav className="flex items-center space-x-8">
-            <div className="flex flex-col items-center text-gray-600">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-              </svg>
-              <span className="text-sm">Home</span>
-            </div>
-            <div className="flex flex-col items-center text-gray-600">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-              <span className="text-sm">Profile</span>
-            </div>
-            <div className="flex flex-col items-center text-gray-600">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <span className="text-sm">Map</span>
-            </div>
-            <div className="flex flex-col items-center text-gray-600">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-              </svg>
-              <span className="text-sm">Inbox</span>
-            </div>
-            <div className="flex flex-col items-center text-gray-600">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              <span className="text-sm">List</span>
-            </div>
-          </nav>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <div className="flex justify-center items-center min-h-[calc(100vh-100px)] px-6">
-        <div className="flex bg-white rounded-lg shadow-lg overflow-hidden max-w-4xl w-full">
-          {/* Sign Up Section */}
-          <div className="w-1/2 p-8">
-            <h2 className="text-3xl font-bold mb-6">Sign Up</h2>
-            <form className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Name</label>
-                <input
-                  type="text"
-                  placeholder="Enter Your First and Last Name"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Email Address</label>
-                <input
-                  type="email"
-                  placeholder="Enter Your Email Address"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Phone Number</label>
-                <input
-                  type="tel"
-                  placeholder="Enter Your Phone Number"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Create Password</label>
-                <input
-                  type="password"
-                  placeholder="Create Your Password"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full bg-slate-600 text-white py-3 rounded-full font-medium hover:bg-slate-700 transition-colors mt-6"
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="#bbb"
+                stroke="#bbb"
+                className="w-4 h-4 absolute right-4"
+                viewBox="0 0 24 24"
               >
-                Sign Up
-              </button>
-            </form>
+                <circle cx="10" cy="7" r="6" data-original="#000000"></circle>
+                <path
+                  d="M14 15H6a5 5 0 0 0-5 5 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 5 5 0 0 0-5-5zm8-4h-2.59l.3-.29a1 1 0 0 0-1.42-1.42l-2 2a1 1 0 0 0 0 1.42l2 2a1 1 0 0 0 1.42 0 1 1 0 0 0 0-1.42l-.3-.29H22a1 1 0 0 0 0-2z"
+                  data-original="#000000"
+                ></path>
+              </svg>
+            </div>
           </div>
 
-          {/* Log In Section */}
-          <div className="w-1/2 p-8 bg-gray-50">
-            <h2 className="text-3xl font-bold mb-6">Log In</h2>
-            <form className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Email Address</label>
-                <input
-                  type="email"
-                  placeholder="Enter Your Email Address"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Password</label>
-                <input
-                  type="password"
-                  placeholder="Enter Your Password"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full bg-slate-600 text-white py-3 rounded-full font-medium hover:bg-slate-700 transition-colors mt-8"
+          <div>
+            <label className="text-slate-900 text-sm font-medium mb-2 block">
+              Password
+            </label>
+            <div className="relative flex items-center">
+              <input
+                name="password"
+                type="password"
+                required
+                className="w-full text-slate-900 text-sm border border-slate-300 px-4 py-3 pr-8 rounded-md outline-blue-600"
+                placeholder="Enter password"
+              />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="#bbb"
+                stroke="#bbb"
+                className="w-4 h-4 absolute right-4 cursor-pointer"
+                viewBox="0 0 128 128"
               >
-                Log In
-              </button>
-            </form>
+                <path
+                  d="M64 104C22.127 104 1.367 67.496.504 65.943a4 4 0 0 1 0-3.887C1.367 60.504 22.127 24 64 24s62.633 36.504 63.496 38.057a4 4 0 0 1 0 3.887C126.633 67.496 105.873 104 64 104zM8.707 63.994C13.465 71.205 32.146 96 64 96c31.955 0 50.553-24.775 55.293-31.994C114.535 56.795 95.854 32 64 32 32.045 32 13.447 56.775 8.707 63.994zM64 88c-13.234 0-24-10.766-24-24s10.766-24 24-24 24 10.766 24 24-10.766 24-24 24zm0-40c-8.822 0-16 7.178-16 16s7.178 16 16 16 16-7.178 16-16-7.178-16-16-16z"
+                  data-original="#000000"
+                ></path>
+              </svg>
+            </div>
           </div>
-        </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center">
+              <input
+                id="remember-me"
+                name="remember-me"
+                type="checkbox"
+                className="h-4 w-4 shrink-0 text-blue-600 focus:ring-blue-500 border-slate-300 rounded"
+              />
+              <label
+                htmlFor="remember-me"
+                className="ml-3 block text-sm text-slate-900"
+              >
+                Remember me
+              </label>
+            </div>
+            <div className="text-sm">
+              <a
+                href="javascript:void(0);"
+                className="text-blue-600 hover:underline font-semibold"
+              >
+                Forgot your password?
+              </a>
+            </div>
+          </div>
+
+          <div className="!mt-12">
+            <button
+              type="button"
+              className="w-full py-2 px-4 text-[15px] font-medium tracking-wide rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none cursor-pointer"
+            >
+              Login
+            </button>
+          </div>
+        </form>
+        </div> 
+
+      {/* SIGN UP CARD */}
+      <div className="flex-1 p-6 sm:p-8 rounded-2xl bg-white border border-gray-200 shadow-md">
+        <h1 className="text-slate-900 text-center text-3xl font-semibold">
+          Sign up
+        </h1>
+        <form className="mt-12 space-y-6">
+          <div>
+            <label className="text-slate-900 text-sm font-medium mb-2 block">
+              User name
+            </label>
+            <input
+              name="new-username"
+              type="text"
+              required
+              className="w-full text-slate-900 text-sm border border-slate-300 px-4 py-3 rounded-md outline-blue-600"
+              placeholder="Choose a user name"
+            />
+          </div>
+
+          <div>
+            <label className="text-slate-900 text-sm font-medium mb-2 block">
+              Email
+            </label>
+            <input
+              name="email"
+              type="email"
+              required
+              className="w-full text-slate-900 text-sm border border-slate-300 px-4 py-3 rounded-md outline-blue-600"
+              placeholder="Enter your email"
+            />
+          </div>
+
+          <div>
+            <label className="text-slate-900 text-sm font-medium mb-2 block">
+              Password
+            </label>
+            <input
+              name="new-password"
+              type="password"
+              required
+              className="w-full text-slate-900 text-sm border border-slate-300 px-4 py-3 rounded-md outline-blue-600"
+              placeholder="Create a password"
+            />
+          </div>
+
+          <div>
+            <label className="text-slate-900 text-sm font-medium mb-2 block">
+              Confirm password
+            </label>
+            <input
+              name="confirm-password"
+              type="password"
+              required
+              className="w-full text-slate-900 text-sm border border-slate-300 px-4 py-3 rounded-md outline-blue-600"
+              placeholder="Confirm your password"
+            />
+          </div>
+
+          <div className="!mt-12">
+            <button
+              type="button"
+              className="w-full py-2 px-4 text-[15px] font-medium tracking-wide rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none cursor-pointer"
+            >
+              Sign Up
+            </button>
+          </div>
+        </form>
       </div>
+
     </div>
+  </div>
   );
 }

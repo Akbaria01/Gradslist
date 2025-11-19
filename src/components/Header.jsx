@@ -13,8 +13,7 @@ export default function Header() {
       {/* LEFT — Logo */}
       <div className="header-left">
         <img src={logo} alt="Logo" className="header-logo" />
-        <Link to="/" className="header-nav-link" style={{ flexDirection: "row", fontSize: "22px" }}>
-          Gradslist
+        <Link to="/" className="header-nav-link" style={{ flexDirection: "row", fontSize: "50px" }}>
         </Link>
       </div>
 
