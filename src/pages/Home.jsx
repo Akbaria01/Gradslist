@@ -115,6 +115,10 @@ export default function Home() {
                   <span>{product.distance}</span>
                 </div>
                 <button className="mt-4 inline-flex items-center justify-center rounded-lg bg-sky-500 px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-sky-600">
+                <button className="mt-4 inline-flex items-center justify-center rounded-lg bg-[#395A7F] px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-[#A3CAE9]">
+
+                <button className="mt-4 inline-flex items-center justify-center rounded-lg bg-sky-500 px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-sky-600">
+
                   View details
                 </button>
               </div>
@@ -139,6 +143,10 @@ export default function Home() {
                 className={`px-3 py-2 text-sm font-medium rounded-lg ${
                   currentPage === page
                     ? "text-white bg-sky-500 border border-sky-500"
+                    ? "text-white bg-[#395A7F] border bg-[#395A7F]"
+
+                    ? "text-white bg-sky-500 border border-sky-500"
+
                     : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
                 }`}
               >
@@ -243,6 +251,10 @@ export default function Home() {
                 type="button"
                 onClick={() => setIsFilterOpen(false)}
                 className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-600"
+                className="rounded-lg bg-[#395A7F] px-4 py-2 text-sm font-medium text-white hover:bg-[#A3CAE9]"
+
+                className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-600"
+
               >
                 Apply filters
               </button>
