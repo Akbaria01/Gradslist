@@ -8,7 +8,7 @@ export default function Login() {
     <div className="flex flex-col items-center justify-center py-6 px-4">
     {/* Wrapper for both cards */}
     <div className="flex flex-col md:flex-row gap-8 w-full max-w-5xl">
-      
+         
       {/* SIGN IN CARD */}
       <div className="flex-1 p-6 sm:p-8 rounded-2xl bg-white border border-gray-200 shadow-md">
         <h1 className="text-slate-900 text-center text-3xl font-semibold">
