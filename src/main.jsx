@@ -15,6 +15,7 @@ import Login from "./pages/Login&Signup.jsx";
 import SafeMeetup from "./pages/SafeMeetup.jsx";
 
 import { SearchProvider } from "./context/SearchContext.jsx";
+import MapPage from "./pages/Map.jsx";
 
 const router = createBrowserRouter([
   {
@@ -23,7 +24,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Home /> },
       { path: "profile", element: <Profile /> },
-      { path: "map", element: <Map /> },
+      { path: "map", element: <MapPage /> },
       { path: "inbox", element: <Message /> },
       { path: "listings", element: <Listings /> },
       { path: "listing/:id", element: <ListingDetail /> },
