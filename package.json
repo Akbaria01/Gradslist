@@ -21,6 +21,7 @@
   "homepage": "https://github.com/Akbaria01/Gradslist#readme",
   "dependencies": {
     "@tailwindcss/vite": "^4.1.17",
+    "@react-google-maps/api": "^2.20.7",
     "firebase": "^12.6.0",
     "lucide-react": "^0.554.0",
     "package": "^1.0.1",
