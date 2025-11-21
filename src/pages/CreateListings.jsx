@@ -1,9 +1,50 @@
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 export default function CreateListings() {
+  const navigate = useNavigate();
+  const [title, setTitle] = useState("");
+  const [price, setPrice] = useState("");
+  const [category, setCategory] = useState("");
+  const [condition, setCondition] = useState("");
+  const [location, setLocation] = useState("");
+  const [description, setDescription] = useState("");
+  const [errors, setErrors] = useState({});
+
+  function validate() {
+    const e = {};
+    if (!title.trim()) e.title = "Title is required";
+    if (!price.trim()) e.price = "Price is required";
+    return e;
+  }
+
+  function handleSubmit(evt) {
+    evt.preventDefault();
+    const e = validate();
+    setErrors(e);
+    if (Object.keys(e).length) return;
+
+    const newListing = {
+      id: String(Date.now()),
+      item: title,
+      brand: category,
+      seller: "You",
+      price,
+      condition,
+      image: "https://images.unsplash.com/photo-1512820790803-83ca734da794?w=400",
+      posted: "just now",
+      distance: location,
+      description,
+    };
+
+    // navigate to ListingDetail and pass listing in router state so the page can render immediately
+    navigate(`/listing/${newListing.id}`, { state: { listing: newListing } });
+  }
+
   return (
     <div className="bg-gray-100 p-8">
       <h2 className="text-3xl font-bold text-gray-900 mb-8">Item For Sale</h2>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Form Section */}
           <div className="space-y-6">
             {/* Title and Price Row */}
@@ -12,17 +53,23 @@ export default function CreateListings() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
                 <input
                   type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
                   placeholder="Enter your value"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
+                {errors.title && <div className="text-xs text-red-500 mt-1">{errors.title}</div>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Price</label>
                 <input
                   type="text"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
                   placeholder="Enter your value"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
+                {errors.price && <div className="text-xs text-red-500 mt-1">{errors.price}</div>}
               </div>
             </div>
 
@@ -32,6 +79,8 @@ export default function CreateListings() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
                 <input
                   type="text"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
                   placeholder="Enter your value"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
@@ -40,6 +89,8 @@ export default function CreateListings() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Condition</label>
                 <input
                   type="text"
+                  value={condition}
+                  onChange={(e) => setCondition(e.target.value)}
                   placeholder="Enter your value"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
@@ -52,6 +103,8 @@ export default function CreateListings() {
                 <label className="block text-sm font-medium text-gray-700 mb-2 text-center">Location</label>
                 <input
                   type="text"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
                   placeholder="Enter your value"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
@@ -64,6 +117,8 @@ export default function CreateListings() {
               <textarea
                 placeholder="Enter your value"
                 rows={4}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
               />
             </div>
@@ -86,7 +141,8 @@ export default function CreateListings() {
             
             {/* Submit Button */}
             <div className="flex justify-center">
-              <button 
+              <button
+                type="submit"
                 className="mt-6 text-white font-semibold py-3 px-16 rounded-lg transition duration-200 hover:opacity-90"
                 style={{ backgroundColor: '#395A7F' }}
               >
@@ -94,7 +150,7 @@ export default function CreateListings() {
               </button>
             </div>
           </div>
-      </div>
+      </form>
     </div>
   );
 }
