@@ -3,6 +3,7 @@ import { useParams, useLocation } from 'react-router-dom';
 import ListingItem from '../components/ListingItem';
 // import { doc, getDoc } from 'firebase/firestore';
 // import { db } from '../firebase';
+import MapComponent from '../components/Map';
 
 export default function ListingDetail() {
   const { id } = useParams();
@@ -75,6 +76,22 @@ export default function ListingDetail() {
       <section className="mt-8 bg-white p-6 rounded shadow-sm">
         <h2 className="text-lg font-semibold mb-2">Description</h2>
         <p className="text-gray-700 whitespace-pre-line">{listing.description || 'No description provided.'}</p>
+      </section>
+
+      <section className="mt-8 bg-white p-6 rounded shadow-sm">
+        <h2 className="text-lg font-semibold mb-2">Location</h2>
+        {/* Determine center: prefer listing.location if it has lat/lng, otherwise default to San Francisco */}
+        {(() => {
+          const sf = { lat: 37.7749, lng: -122.4194 };
+          const hasLatLng = listing.location && typeof listing.location === 'object' && listing.location.lat && listing.location.lng;
+          const center = hasLatLng ? listing.location : sf;
+          const markers = [{ id: listing.id || 'listing', position: center, title: listing.item }];
+          return (
+            <div className="flex justify-center">
+              <MapComponent center={center} zoom={11} markers={markers} height="320px" />
+            </div>
+          );
+        })()}
       </section>
     </main>
   );
