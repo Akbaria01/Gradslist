@@ -2,7 +2,6 @@
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -25,9 +24,4 @@ const analytics = typeof window !== "undefined" ? getAnalytics(app) : null;
 // Create a Firestore client bound to this `app` and export it for use across the app.
 const db = getFirestore(app);
 
-// Initialize Firebase Auth and export it
-const auth = getAuth(app);
-
-
-
-export { app, analytics, db, auth};
+export { app, analytics, db };
