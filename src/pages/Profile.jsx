@@ -1,30 +1,58 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { doSignOut } from "../auth";
 import { useNavigate } from "react-router-dom";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase";
 
 export default function Profile() {
   const [rating, setRating] = useState(4.0);
   const [hoverRating, setHoverRating] = useState(0);
-  // Get current user from AuthContext
+
   const { currentUser } = useAuth();
   const navigate = useNavigate();
 
-  // If displayName is missing, show "User"
-  const userName = currentUser?.displayName || "User";
-  const userEmail = currentUser?.email || "";
+  // Local state for profile name + email
+  const [profileName, setProfileName] = useState("User");
+  const [profileEmail, setProfileEmail] = useState("");
 
-  // User summary object for easier usage
+  // Load user data from Firestore "users" collection
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      if (!currentUser) return;
+
+      try {
+        const userRef = doc(db, "users", currentUser.uid);
+        const snap = await getDoc(userRef);
+
+        if (snap.exists()) {
+          const data = snap.data();
+          setProfileName(data.username || currentUser.displayName || "User");
+          setProfileEmail(data.email || currentUser.email || "");
+        } else {
+          // fallback to auth info if no doc (shouldn't usually happen now)
+          setProfileName(currentUser.displayName || "User");
+          setProfileEmail(currentUser.email || "");
+        }
+      } catch (err) {
+        console.error("Failed to load user profile:", err);
+        setProfileName(currentUser.displayName || "User");
+        setProfileEmail(currentUser.email || "");
+      }
+    };
+
+    loadUserProfile();
+  }, [currentUser]);
+
   const user = {
-    name: userName,
-    email: userEmail,
-    profilePic: "", // could be populated later with a photo URL
+    name: profileName,
+    email: profileEmail,
+    profilePic: "",
     ratingCount: 10,
   };
 
   const buttonStyle = "bg-[#2E4C6E] hover:bg-[#243c58] text-white";
 
-  // Handle log out and redirect to login page
   const handleLogout = async () => {
     try {
       await doSignOut();
@@ -34,11 +62,9 @@ export default function Profile() {
     }
   };
 
-  // Handle click on "Create New Listing"
   const handleCreateListing = () => {
     navigate("/listing/create");
   };
-
   const listings = [
     { id: 1, name: "Gaming Laptop", price: "$850", condition: "Like New", image: "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400" },
     { id: 2, name: "Mountain Bike", price: "$320", condition: "Good", image: "https://images.unsplash.com/photo-1571068316344-75bc76f77890?w=400" },

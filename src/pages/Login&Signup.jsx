@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
-import { doSignInUserWithEmailAndPassword, doSignInWithGoogle, doCreateUserWithEmailAndPassword,} from "../auth";
+import { doSignInUserWithEmailAndPassword, doSignInWithGoogle, doCreateUserWithEmailAndPassword} from "../auth";
 import { useAuth } from "../context/AuthContext";
 import { updateProfile } from "firebase/auth";
+import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
+import { db, auth } from "../firebase";  
 
 export default function Login() {
   const { userLoggedIn } = useAuth();
@@ -30,9 +32,9 @@ export default function Login() {
     return <Navigate to="/" replace />;
   }
 
-  // -------------------------
-  // LOGIN HANDLERS
-  // -------------------------
+
+  // LOGIN WITH EMAIL/PASS
+
   const onLoginSubmit = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
@@ -63,7 +65,9 @@ export default function Login() {
     }
   };
 
-  // Login with Google popup
+
+  // LOGIN WITH GOOGLE
+
   const onGoogleSignIn = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
@@ -72,8 +76,29 @@ export default function Login() {
     setIsSubmitting(true);
 
     try {
+      // Sign in or sign up user with Google
       await doSignInWithGoogle();
-      // AuthContext will pick up new user
+
+      // Get the signed-in user
+      const googleUser = auth.currentUser;
+
+      if (googleUser) {
+        // Check if Firestore user profile already exists
+        const docRef = doc(db, "users", googleUser.uid);
+        const docSnap = await getDoc(docRef);
+
+        // If this Google user is NEW → create Firestore doc
+        if (!docSnap.exists()) {
+          await setDoc(docRef, {
+            uid: googleUser.uid,
+            username: googleUser.displayName || "Google User",
+            email: googleUser.email,
+            createdAt: serverTimestamp(),
+          });
+        }
+      }
+
+      // AuthContext will handle redirect
     } catch (err) {
       console.error(err);
       setLoginError("Failed to sign in with Google.");
@@ -81,9 +106,9 @@ export default function Login() {
     }
   };
 
-  // -------------------------
-  // SIGNUP HANDLERS
-  // -------------------------
+
+  // SIGNUP HANDLER
+
   const onSignupSubmit = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
@@ -122,14 +147,24 @@ export default function Login() {
         await updateProfile(userCredential.user, {
           displayName: signupUsername,
         });
+
+        // Create Firestore user document
+        await setDoc(doc(db, "users", userCredential.user.uid), {
+          uid: userCredential.user.uid,
+          username: signupUsername,
+          email: signupEmail,
+          createdAt: serverTimestamp(),
+        });
       }
-      // AuthContext will pick up updated user on onAuthStateChanged
+
+      // AuthContext will update after onAuthStateChanged
     } catch (err) {
       console.error(err);
       setSignupError("Unable to create account.");
       setIsSubmitting(false);
     }
   };
+
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-120px)] py-10 px-4">
