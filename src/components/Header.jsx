@@ -1,28 +1,11 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Home, User, MapPin, MessageSquare, Pencil } from "lucide-react";
 import { useSearch } from "../context/SearchContext";
-import { useAuthState } from "react-firebase-hooks/auth";
-import { auth } from "../firebase";
 import logo from "../assets/images/logo.svg";
 import "../styles/header.css";
 
 export default function Header() {
   const { setSearchQuery } = useSearch();
-
-  const navigate = useNavigate();
-   // Hook from react-firebase-hooks to get the current user
-   const [user] = useAuthState(auth);
-
-   // Decide where to go when the Profile icon is clicked
-   const handleProfileClick = () => {
-     if (!user) {
-       // If not logged in, go to login & signup page
-       navigate("/login&signup");
-     } else {
-       // If logged in, go to user profile/dashboard
-       navigate("/profile");
-     }
-  };
 
   return (
     <header className="header">
@@ -52,10 +35,10 @@ export default function Header() {
           <span>Home</span>
         </Link>
 
-        <button onClick={handleProfileClick} className="header-nav-link">
+        <Link to="/profile" className="header-nav-link">
           <User size={28} />
           <span>Profile</span>
-        </button>
+        </Link>
 
         <Link to="/map" className="header-nav-link">
           <MapPin size={28} />
