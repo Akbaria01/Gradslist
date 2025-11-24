@@ -60,9 +60,10 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
+      { path: "/login&signup", element: <Login /> },
     ],
   },
-  { path: "/login&signup", element: <Login /> },
+  
 ]);
 
 ReactDOM.createRoot(document.getElementById("root")).render(
