@@ -9,7 +9,6 @@ import Home from "./pages/Home.jsx";
 import Profile from "./pages/Profile.jsx";
 import MapPage from "./pages/Map.jsx";
 import Message from "./pages/Message.jsx";
-import Listings from "./pages/Listings.jsx";
 import ListingDetail from "./pages/ListingDetail.jsx";
 import CreateListings from "./pages/CreateListings.jsx";
 import Login from "./pages/Login&Signup.jsx";
@@ -42,7 +41,6 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
-      { path: "listings", element: <Listings /> },
       { path: "listing/:id", element: <ListingDetail /> },
       {
         path: "listing/create",

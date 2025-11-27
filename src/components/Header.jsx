@@ -33,9 +33,13 @@ export default function Header() {
     
      {/* LEFT — Logo */}
      <div className="header-left">
-       <Link to="/" className="flex items-center gap-2">
-         <img src={logo} alt="Logo" className="header-logo" />
-       </Link>
+       <Link 
+          to="/" 
+          state={{ resetHome: true }} 
+          className="flex items-center gap-2"
+      >
+        <img src={logo} alt="Logo" className="header-logo" />
+      </Link>
      </div>
 
 
@@ -53,10 +57,14 @@ export default function Header() {
 
      {/* RIGHT — Navigation Icons */}
      <nav className="header-nav">
-       <Link to="/" className="header-nav-link">
-         <Home size={28} />
-         <span>Home</span>
-       </Link>
+       <Link 
+          to="/" 
+          state={{ resetHome: true }} 
+          className="header-nav-link"
+        >
+          <Home size={28} />
+          <span>Home</span>
+        </Link>
 
 
        <button onClick={handleProfileClick} className="header-nav-link">
