@@ -15,41 +15,54 @@ function haversineDistance(a, b) {
   return R * c;
 }
 
-export default function LocationsList({ markers = [], userLocation = null, onSelect = () => {} }) {
+export default function LocationsList({ markers = [], userLocation = null, onSelect = () => {}, maxItems = 17 }) {
   const computeDistance = (m) => {
     if (!userLocation) return null;
     const km = haversineDistance(userLocation, m.position);
     return km;
   };
 
+  // compute distances then sort ascending (closest first)
+  const withDistance = markers.map((m) => {
+    const km = computeDistance(m);
+    return { m, km, miles: km != null ? (km * 0.621371).toFixed(1) : null };
+  });
+
+  const sorted = withDistance.sort((a, b) => {
+    const ak = a.km == null ? Infinity : a.km;
+    const bk = b.km == null ? Infinity : b.km;
+    return ak - bk;
+  });
+
+  const displayed = sorted.slice(0, maxItems);
+
   return (
     <aside className="bg-white rounded shadow p-4 w-full">
-      <h2 className="text-lg font-semibold mb-3">Nearby Places</h2>
-      <div className="space-y-3">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-lg font-semibold mb-3">Nearby Places</h2>
+      </div>
+
+  <div className="space-y-3 max-h-[620px] overflow-y-scroll pr-2">
         {markers.length === 0 && <div className="text-gray-500">No locations</div>}
-        {markers.map((m) => {
-          const km = computeDistance(m);
-          const miles = km ? (km * 0.621371).toFixed(1) : null;
-          return (
-            <button
-              key={m.id}
-              onClick={() => onSelect(m.id)}
-              className="w-full text-left p-3 rounded hover:bg-gray-50 flex justify-between items-start"
-            >
-              <div>
-                <div className="font-medium">{m.title || 'Unnamed'}</div>
-                {m.description && <div className="text-sm text-gray-600">{m.description}</div>}
-              </div>
-              <div className="text-sm text-gray-500">
-                {m.position && km != null ? (
-                  <div>{miles} mi</div>
-                ) : (
-                  <div>—</div>
-                )}
-              </div>
-            </button>
-          );
-        })}
+        {displayed.map(({ m, km, miles }) => (
+          <button
+            key={m.id}
+            onClick={() => onSelect(m.id)}
+            className="w-full text-left p-3 rounded hover:bg-gray-50 flex justify-between items-start"
+          >
+            <div>
+              <div className="font-medium">{m.title || 'Unnamed'}</div>
+              {m.description && <div className="text-sm text-gray-600">{m.description}</div>}
+            </div>
+            <div className="text-sm text-gray-500">
+              {m.position && km != null ? (
+                <div>{miles} mi</div>
+              ) : (
+                <div>—</div>
+              )}
+            </div>
+          </button>
+        ))}
       </div>
     </aside>
   );
