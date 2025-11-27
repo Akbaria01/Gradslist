@@ -125,14 +125,20 @@ export default function MapPage() {
     <main className="page-map p-4">
       <h1 className="text-2xl font-bold mb-4">Recommended Meetup Locations</h1>
 
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="md:w-1/3 pl-4 md:pl-8">
+      <div className="flex flex-col md:flex-row gap-4 items-start">
+        <div className="md:w-2/5 pl-4 md:pl-8">
           <LocationsList markers={markers} userLocation={userLocation} onSelect={(id) => setSelectedId(id)} />
         </div>
 
-        <div className="md:w-2/3 flex justify-center">
-          <div style={{ width: '100%', maxWidth: 720 }}>
-            <MapComponent center={center} zoom={11} markers={markers} selectedMarkerId={selectedId} height="760px" />
+        <div className="md:w-3/5 flex justify-center">
+          <div style={{ width: '75%' }}>
+            <MapComponent
+              center={center}
+              zoom={11}
+              markers={markers}
+              selectedMarkerId={selectedId}
+              height="650px"
+            />
           </div>
         </div>
       </div>
