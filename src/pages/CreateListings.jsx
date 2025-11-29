@@ -123,6 +123,7 @@ export default function CreateListings() {
 
         const payload = {
           title: title,
+          titleLower: title.toLowerCase(),
           price: Number(price) || price,
           description,
           category,

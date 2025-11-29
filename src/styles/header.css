@@ -24,6 +24,7 @@
 
 
 .header-search-container {
+  position: relative; /* add this */
   display: flex;
   align-items: center;
   background: #f1f1f1;
@@ -88,13 +89,19 @@
 }
 .search-dropdown {
   position: absolute;
-  top: 47px;
-  width: 100%;
+  top: 42px;
+  left: 0;
+  width: 100%; /* PERFECT MATCH FOR YOUR EXACT LAYOUT */
   background: white;
   border: 1px solid #ddd;
   border-top: none;
+  border-radius: 0 0 6px 6px;
   z-index: 9999;
+  overflow-y: auto;
+  max-height: 200px;
 }
+
+
 
 .search-dropdown-item {
   padding: 10px;

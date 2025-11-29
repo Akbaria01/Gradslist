@@ -169,9 +169,9 @@ export default function Home() {
                 return query(
                   qRef,
                   where(field, "==", value),
-                  where("title", ">=", start),
-                  where("title", "<=", end),
-                  orderBy("title"),
+                  where("title", ">=", start.toLocaleLowerCase()),
+                  where("title", "<=", end.toLocaleLowerCase()),
+                  orderBy("titleLower"),
                   limit(1000)
                 );
               } catch {
@@ -193,9 +193,9 @@ export default function Home() {
             try {
               const q = query(
                 collection(db, "listings"),
-                where("title", ">=", start),
-                where("title", "<=", end),
-                orderBy("title"),
+                where("titleLower", ">=", start.toLocaleLowerCase()),
+                where("titleLower", "<=", end.toLocaleLowerCase()),
+                orderBy("titleLower"),
                 limit(1000)
               );
               finalResults = await runAndMap(q);
@@ -246,9 +246,9 @@ export default function Home() {
               const end = s + "\uf8ff";
               const q = query(
                 collection(db, "listings"),
-                where("title", ">=", start),
-                where("title", "<=", end),
-                orderBy("title"),
+                where("titleLower", ">=", start.toLocaleLowerCase()),
+                where("titleLower", "<=", end.toLocaleLowerCase()),
+                orderBy("titleLower"),
                 limit(1000)
               );
               const globalSearch = await runAndMap(q);
