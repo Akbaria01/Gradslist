@@ -1,5 +1,11 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import CityAutocomplete from "../components/CityAutocomplete";
+import { useLoadScript } from "@react-google-maps/api";
+import { useAuth } from "../context/AuthContext";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db, app } from "../firebase";
 
 export default function CreateListings() {
   const navigate = useNavigate();
@@ -10,6 +16,41 @@ export default function CreateListings() {
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
   const [errors, setErrors] = useState({});
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
+  React.useEffect(() => {
+    return () => {
+      // cleanup created object URL when component unmounts
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
+    };
+  }, [imagePreview]);
+
+  const CATEGORY_OPTIONS = [
+    "Electronics & Media",
+    "Home & Garden",
+    "Clothing, Shoes, & Accessories",
+    "Baby & Kids",
+    "Vehicles",
+    "Sports & Outdoors",
+    "Collectibles & Art",
+    "Pet supplies",
+    "More",
+  ];
+
+  const CONDITION_OPTIONS = [
+    "New",
+    "New without tags",
+    "Used",
+    "Used - like new",
+  ];
+
+  // load Google Maps script with Places library for the city autocomplete
+  const { isLoaded, loadError } = useLoadScript({
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+    libraries: ["places"],
+  });
+
+  const { currentUser } = useAuth();
 
   function validate() {
     const e = {};
@@ -23,22 +64,71 @@ export default function CreateListings() {
     const e = validate();
     setErrors(e);
     if (Object.keys(e).length) return;
+    // require logged-in user
+    if (!currentUser) {
+      // redirect to login
+      navigate("/login");
+      return;
+    }
 
-    const newListing = {
-      id: String(Date.now()),
-      item: title,
-      brand: category,
-      seller: "You",
-      price,
-      condition,
-      image: "https://images.unsplash.com/photo-1512820790803-83ca734da794?w=400",
-      posted: "just now",
-      distance: location,
-      description,
-    };
+    (async () => {
+      try {
+        // optional image upload to Firebase Storage
+        let imageURL = "";
+        if (imageFile) {
+          try {
+            console.log("Preparing to upload image", {
+              name: imageFile.name,
+              type: imageFile.type,
+              size: imageFile.size,
+            });
 
-    // navigate to ListingDetail and pass listing in router state so the page can render immediately
-    navigate(`/listing/${newListing.id}`, { state: { listing: newListing } });
+            const storage = getStorage(app);
+            const configuredBucket = storage?.app?.options?.storageBucket;
+            if (!configuredBucket || !configuredBucket.includes("appspot")) {
+              console.warn("Firebase storage bucket appears misconfigured:", configuredBucket);
+            }
+
+            const destPath = `listings/${currentUser.uid}/${Date.now()}_${imageFile.name}`;
+            console.log("Uploading to storage path:", destPath);
+            const fileRef = storageRef(storage, destPath);
+
+            const snap = await uploadBytes(fileRef, imageFile);
+            console.log("uploadBytes snapshot:", snap);
+
+            imageURL = await getDownloadURL(fileRef);
+            console.log("Got downloadURL:", imageURL);
+          } catch (uploadErr) {
+            // more verbose logging for debugging client-side upload failures (CORS / auth / network)
+            console.error("Image upload failed:", uploadErr?.code || uploadErr, uploadErr?.message || "");
+            // fail gracefully: continue without image so listing can still be created
+            imageURL = null;
+            // surface a non-blocking error to the user
+            setErrors((prev) => ({ ...prev, upload: "Image upload failed; listing created without image." }));
+          }
+        }
+
+        const payload = {
+          title: title,
+          price: Number(price) || price,
+          description,
+          category,
+          condition,
+          location,
+          image: imageURL || null,
+          sellerId: currentUser.uid,
+          createdAt: serverTimestamp(),
+        };
+
+        const docRef = await addDoc(collection(db, "listings"), payload);
+
+        // navigate to detail with the new doc id and payload (include id)
+        navigate(`/listing/${docRef.id}`, { state: { listing: { id: docRef.id, ...payload } } });
+      } catch (err) {
+        console.error("Failed to create listing:", err);
+        setErrors({ submit: "Failed to create listing. Try again." });
+      }
+    })();
   }
 
   return (
@@ -66,7 +156,7 @@ export default function CreateListings() {
                   type="text"
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
-                  placeholder="Enter your value"
+                  placeholder="Enter your price"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 {errors.price && <div className="text-xs text-red-500 mt-1">{errors.price}</div>}
@@ -77,37 +167,54 @@ export default function CreateListings() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                <input
-                  type="text"
+                <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  placeholder="Enter your value"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Select a category</option>
+                  {CATEGORY_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Condition</label>
-                <input
-                  type="text"
+                <select
                   value={condition}
                   onChange={(e) => setCondition(e.target.value)}
-                  placeholder="Enter your value"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Select condition</option>
+                  {CONDITION_OPTIONS.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
             {/* Location */}
             <div className="flex justify-center">
               <div className="w-64">
-                <label className="block text-sm font-medium text-gray-700 mb-2 text-center">Location</label>
-                <input
-                  type="text"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="Enter your value"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-2 text-center">Location (city only)</label>
+                {loadError ? (
+                  <div className="text-sm text-red-500">Failed to load Google Maps script. Check console for errors.</div>
+                ) : !isLoaded ? (
+                  <input
+                    type="text"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="Loading map..."
+                    disabled
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-500"
+                  />
+                ) : (
+                  <CityAutocomplete value={location} onChange={(v) => setLocation(v)} />
+                )}
               </div>
             </div>
 
@@ -115,7 +222,7 @@ export default function CreateListings() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
               <textarea
-                placeholder="Enter your value"
+                placeholder="Enter your description"
                 rows={4}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -127,16 +234,36 @@ export default function CreateListings() {
           {/* Photo Upload */}
           <div className="flex flex-col">
             <div className="w-full">
-              <div className="bg-gray-400 rounded-lg flex flex-col items-center justify-center p-8 aspect-[4/3]">
-              <div className="text-white mb-4">
-                <svg className="w-16 h-16 mx-auto" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
-                  <path d="M12,11L16,15H13V19H11V15H8L12,11Z" />
-                </svg>
-              </div>
-                <h3 className="text-white text-xl font-semibold mb-2">Add Photos</h3>
-                <p className="text-white text-sm">or drag and drop</p>
-              </div>
+                <div className="bg-gray-400 rounded-lg flex items-center justify-center p-4 aspect-[4/3] relative overflow-hidden">
+                  {imagePreview ? (
+                    <img src={imagePreview} alt="preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center w-full h-full text-white p-8">
+                      <div className="text-white mb-4">
+                        <svg className="w-16 h-16 mx-auto" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+                          <path d="M12,11L16,15H13V19H11V15H8L12,11Z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-white text-xl font-semibold mb-2">Add Photos</h3>
+                      <p className="text-white text-sm">JPEG or PNG — or drag and drop</p>
+                    </div>
+                  )}
+
+                  {/* file input positioned over the area */}
+                  <input
+                    type="file"
+                    accept="image/png, image/jpeg"
+                    onChange={(e) => {
+                      const f = e.target.files && e.target.files[0];
+                      if (!f) return;
+                      setImageFile(f);
+                      const url = URL.createObjectURL(f);
+                      setImagePreview(url);
+                    }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                </div>
             </div>
             
             {/* Submit Button */}
