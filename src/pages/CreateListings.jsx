@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import CityAutocomplete from "../components/CityAutocomplete";
 import { useLoadScript } from "@react-google-maps/api";
 import { useAuth } from "../context/AuthContext";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { addDoc, collection, serverTimestamp, doc, getDoc } from "firebase/firestore";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, app } from "../firebase";
 
@@ -108,6 +108,19 @@ export default function CreateListings() {
           }
         }
 
+        // Resolve seller display name at creation time so ListingDetail doesn't need an extra read.
+        let sellerName = currentUser.displayName || currentUser.email || null;
+        try {
+          // Prefer a username stored in users/{uid} if available
+          const userSnap = await getDoc(doc(db, 'users', currentUser.uid));
+          if (userSnap.exists()) {
+            const u = userSnap.data();
+            sellerName = u.username || u.displayName || u.name || sellerName;
+          }
+        } catch (e) {
+          console.warn('Could not read users/{uid} to resolve seller name:', e?.message || e);
+        }
+
         const payload = {
           title: title,
           price: Number(price) || price,
@@ -117,6 +130,7 @@ export default function CreateListings() {
           location,
           image: imageURL || null,
           sellerId: currentUser.uid,
+          seller: sellerName || null,
           createdAt: serverTimestamp(),
         };
 
