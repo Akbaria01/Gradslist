@@ -20,6 +20,17 @@ export default function MapComponent({
   const [mapRef, setMapRef] = useState(null);
   const [placeInfo, setPlaceInfo] = useState(null); // { id, position, details, displayName }
 
+  // If the parent provides a new center, pan the map to it when possible.
+  useEffect(() => {
+    if (!mapRef || !center) return;
+    try {
+      mapRef.panTo(center);
+      if (mapRef.setZoom) mapRef.setZoom(11);
+    } catch (e) {
+      // ignore pan errors
+    }
+  }, [mapRef, center]);
+
   useEffect(() => {
     if (!selectedMarkerId || !mapRef) return;
     const m = markers.find((x) => x.id === selectedMarkerId);

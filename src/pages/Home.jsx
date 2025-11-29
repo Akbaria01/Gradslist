@@ -1,6 +1,6 @@
 // src/pages/Home.jsx
 import { useState, useEffect, useCallback } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useSearch } from "../context/SearchContext"; 
 import {
   collection,
@@ -89,6 +89,7 @@ export default function Home() {
   const [selectedFilter, setSelectedFilter] = useState(null);
 
   const location = useLocation();
+  const navigate = useNavigate();
   useEffect(() => {
     if (location.state?.resetHome) {
     // reset filters & reload backend
@@ -432,7 +433,13 @@ export default function Home() {
                   <span>Posted {product.posted}</span>
                   <span>{product.distance}</span>
                 </div>
-                <button className="mt-4 inline-flex items-center justify-center rounded-lg bg-[#395A7F] px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-[#A3CAE9]">
+                <button
+                  onClick={() => {
+                    const payload = product._raw ? { id: product.id, ...product._raw } : { id: product.id, ...product };
+                    navigate(`/listing/${product.id}`, { state: { listing: payload } });
+                  }}
+                  className="mt-4 inline-flex items-center justify-center rounded-lg bg-[#395A7F] px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-[#A3CAE9]"
+                >
                   View details
                 </button>
               </div>
