@@ -7,9 +7,6 @@ import { db } from "../firebase";
 
 
 export default function Profile() {
- const [rating, setRating] = useState(4.0);
- const [hoverRating, setHoverRating] = useState(0);
-
 
  const { currentUser } = useAuth();
  const navigate = useNavigate();
@@ -19,6 +16,7 @@ export default function Profile() {
  const [profileName, setProfileName] = useState("User");
  const [profileEmail, setProfileEmail] = useState("");
 
+ const [profileRating, setProfileRating] = useState(0);
 
  // Load user data from Firestore "users" collection
  useEffect(() => {
@@ -56,7 +54,7 @@ export default function Profile() {
    name: profileName,
    email: profileEmail,
    profilePic: "",
-   ratingCount: 10,
+   ratingCount: 0,
  };
 
 
@@ -97,31 +95,33 @@ export default function Profile() {
  ];
 
 
- const renderStars = () => {
-   const stars = [];
-   for (let i = 1; i <= 5; i++) {
-     stars.push(
-       <span
-         key={i}
-         onClick={() => setRating(i)}
-         onMouseEnter={() => setHoverRating(i)}
-         onMouseLeave={() => setHoverRating(0)}
-         className={`cursor-pointer text-xl ${
-           i <= (hoverRating || rating) ? "text-yellow-400" : "text-gray-300"
-         }`}
-       >
-         ★
-       </span>
-     );
-   }
-   return stars;
+ const renderStars = (ratingValue) => {
+  const stars = [];
+  for (let i = 1; i <= 5; i++) {
+    stars.push(
+      <span
+        key={i}
+        className={`text-xl ${
+          i <= ratingValue ? "text-yellow-400" : "text-gray-300"
+        }`}
+      >
+        ★
+      </span>
+    );
+  }
+  return stars;
  };
+
+ 
+ const goToMyListings = () => navigate("/Mylistings");
+ const goToSavedItems = () => navigate("/SavedItems");
+ const goToLeaveReview = () => navigate("/LeaveReview");
 
 
  return (
    <div className="bg-[#eaecef] min-h-screen p-6">
      {/* Top Row: Dashboard Title + Profile + Rating */}
-     <div className="flex flex-nowrap justify-center items-center gap-20 mb-10">
+     <div className="flex flex-nowrap justify-center items-center gap-40 mb-10">
        <div className="flex flex-col items-center">
          <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">
            {user.name} Dashboard
@@ -161,7 +161,10 @@ export default function Profile() {
            {user.email && (
              <p className="text-xs text-gray-500 truncate">{user.email}</p>
            )}
-           <button className="text-sm text-sky-600 hover:underline mt-1">
+           <button 
+             onClick={() => navigate("/viewprofile")}
+             className="text-sm text-sky-600 hover:underline mt-1"
+           >
              View Profile
            </button>
          </div>
@@ -179,7 +182,7 @@ export default function Profile() {
          <div className="flex items-center mt-1">
            {renderStars()}
            <span className="ml-2 text-sm text-gray-600">
-             {rating} ({user.ratingCount} ratings)
+            {profileRating} ({user.ratingCount})
            </span>
          </div>
        </div>
@@ -194,7 +197,7 @@ export default function Profile() {
            <h2 className="text-lg font-semibold text-gray-900">
              My Listings
            </h2>
-           <button className={`text-sm ${buttonStyle} px-3 py-1 rounded`}>
+           <button onClick={goToMyListings} className={`text-sm ${buttonStyle} px-3 py-1 rounded`}>
              View All
            </button>
          </div>
@@ -238,7 +241,7 @@ export default function Profile() {
            <h2 className="text-lg font-semibold text-gray-900">
              Saved Items
            </h2>
-           <button className={`text-sm ${buttonStyle} px-3 py-1 rounded`}>
+           <button onClick={goToSavedItems} className={`text-sm ${buttonStyle} px-3 py-1 rounded`}>
              View All
            </button>
          </div>
@@ -279,7 +282,7 @@ export default function Profile() {
            <h2 className="text-lg font-semibold text-gray-900">
              Leave a Review
            </h2>
-           <button className={`text-sm ${buttonStyle} px-3 py-1 rounded`}>
+           <button onClick={goToLeaveReview} className={`text-sm ${buttonStyle} px-3 py-1 rounded`}>
              View All
            </button>
          </div>
@@ -314,6 +317,3 @@ export default function Profile() {
    </div>
  );
 }
-
-
-

@@ -14,6 +14,10 @@ import CreateListings from "./pages/CreateListings.jsx";
 import Login from "./pages/Login&Signup.jsx";
 import SafeMeetup from "./pages/SafeMeetup.jsx";
 import Help from "./pages/Help.jsx";
+import MyListings from "./pages/MyListings.jsx";
+import SavedItems from "./pages/SavedItems.jsx";
+import LeaveReview from "./pages/LeaveReview.jsx";
+import ViewProfile from "./pages/ViewProfile.jsx";
 
 import { SearchProvider } from "./context/SearchContext.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
@@ -61,6 +65,38 @@ const router = createBrowserRouter([
       },
       { path: "help", element: <Help /> },
       { path: "/login&signup", element: <Login /> },
+      {
+        path: "mylistings",
+        element: (
+          <ProtectedRoute>
+            <MyListings />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "saveditems",
+        element: (
+          <ProtectedRoute>
+            <SavedItems />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "leavereview",
+        element: (
+          <ProtectedRoute>
+            <LeaveReview />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "viewprofile",
+        element: (
+          <ProtectedRoute>
+            <ViewProfile />
+          </ProtectedRoute>
+        ),
+      },
     ],
   },
   
