@@ -118,8 +118,10 @@ export default function Home() {
       // map Firestore fields to the UI fields your page expects
       const mapped = {
         id: doc.id,
-        item: data.title ?? data.name ?? "Untitled",
-        brand: data.brand ?? data.subtitle ?? data.description ?? "",
+        // UI expects `name` for the card title — map from title/name
+        name: data.title ?? data.name ?? "Untitled",
+        // keep brand separate; don't fall back to description
+        brand: data.brand ?? data.subtitle ?? "",
         price:
           data.price !== undefined
             ? typeof data.price === "number"
@@ -130,6 +132,8 @@ export default function Home() {
         distance: data.distance ?? "",
         image: data.imageUrl ?? data.image ?? data.photoUrl ?? "",
         alt: data.title ?? data.name ?? "listing image",
+        // keep description in raw if needed, but don't show it on the card
+        description: data.description ?? "",
         // preserve original doc data if needed later
         _raw: data,
       };
