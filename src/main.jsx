@@ -59,6 +59,7 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
+      { path: "help", element: <Help /> },
       { path: "/login&signup", element: <Login /> },
     ],
   },
