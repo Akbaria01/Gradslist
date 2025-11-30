@@ -1,4 +1,7 @@
+import { useNavigate } from "react-router-dom";
+
 export default function SavedItems() {
+const navigate = useNavigate();
   const savedItems = [
     { id: 1, item: "Wireless Headphones", brand: "Sony · Noise cancelling", seller: "Emma Brown", price: "$150", condition: "Excellent", image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400", posted: "3 days ago", distance: "1.2 miles away" },
     { id: 2, item: "Running Shoes", brand: "Nike · Size 10", seller: "Liam Wilson", price: "$65", condition: "Good", image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400", posted: "2 days ago", distance: "2.1 miles away" },
@@ -11,17 +14,27 @@ export default function SavedItems() {
     <div className="bg-[#eaecef] min-h-screen p-6">
       {/* Top Row: Back Button + Title */}
       <div className="flex items-center justify-between mb-6">
-        <button className={`rounded-lg px-4 py-2 text-sm font-medium shadow-sm ${buttonStyle}`}>Back</button>
+      <button
+          onClick={() => navigate("/profile")}
+          className={`rounded-lg px-4 py-2 text-sm font-medium shadow-sm ${buttonStyle}`}>
+          Back
+        </button>
         <h1 className="text-3xl font-bold text-gray-900 text-center flex-1">Saved Items</h1>
         <div className="w-24" /> {/* Placeholder to balance flex */}
       </div>
 
       {/* Saved Items Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-6">
         {savedItems.map((item) => (
-          <div key={item.id} className="group relative flex flex-col rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
+          <div
+            key={item.id}
+            className="group relative flex flex-col rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
             <div className="aspect-square w-full overflow-hidden rounded-lg bg-gray-100">
-              <img src={item.image} alt={item.item} className="h-full w-full object-cover transition group-hover:scale-105" />
+              <img
+                src={item.image}
+                alt={item.item}
+                className="h-full w-full object-cover transition group-hover:scale-105"
+              />
             </div>
             <div className="mt-4 flex flex-1 flex-col">
               <div className="flex items-start justify-between gap-2">
@@ -37,9 +50,22 @@ export default function SavedItems() {
                 <span>Posted {item.posted}</span>
                 <span>{item.distance}</span>
               </div>
-              <div className="mt-4 flex gap-3">
-                <button className="text-xs text-sky-600 hover:underline">View</button>
-                <button className="text-xs text-red-500 hover:underline">Delete</button>
+              <div className="mt-4 flex flex-col gap-2">
+                <button
+                  className="inline-flex items-center justify-center rounded-lg bg-[#395A7F] px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-[#A3CAE9]"
+                >
+                  View
+                </button>
+                <button
+                  className="inline-flex items-center justify-center rounded-lg bg-gray-200 px-3 py-2 text-xs font-medium text-gray-800 shadow-sm hover:bg-gray-300"
+                >
+                  Edit
+                </button>
+                <button
+                  className="inline-flex items-center justify-center rounded-lg bg-red-500 px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-red-600"
+                >
+                  Delete
+                </button>
               </div>
             </div>
           </div>
@@ -48,4 +74,3 @@ export default function SavedItems() {
     </div>
   );
 }
-
