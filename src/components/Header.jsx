@@ -46,9 +46,9 @@ export default function Header() {
         const listingsRef = collection(db, "listings");
         const q = query(
           listingsRef,
-          orderBy("title"),
-          startAt(searchQuery),
-          endAt(searchQuery + "\uf8ff"),
+          orderBy("titleLower"),
+          startAt(searchQuery.toLowerCase()),
+          endAt(searchQuery.toLowerCase() + "\uf8ff"),
           limit(5)
         );
 
