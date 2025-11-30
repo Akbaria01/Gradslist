@@ -1,3 +1,4 @@
+// src/main.jsx
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
@@ -6,9 +7,8 @@ import "./styles/globals.css";
 
 import Home from "./pages/Home.jsx";
 import Profile from "./pages/Profile.jsx";
-import Map from "./pages/Map.jsx";
+import MapPage from "./pages/Map.jsx";
 import Message from "./pages/Message.jsx";
-import Listings from "./pages/Listings.jsx";
 import ListingDetail from "./pages/ListingDetail.jsx";
 import CreateListings from "./pages/CreateListings.jsx";
 import Login from "./pages/Login&Signup.jsx";
@@ -16,7 +16,8 @@ import SafeMeetup from "./pages/SafeMeetup.jsx";
 import Help from "./pages/Help.jsx";
 
 import { SearchProvider } from "./context/SearchContext.jsx";
-import MapPage from "./pages/Map.jsx";
+import { AuthProvider } from "./context/AuthContext.jsx";
+import ProtectedRoute from "./components/protectedRoute.jsx";
 
 const router = createBrowserRouter([
   {
@@ -24,23 +25,52 @@ const router = createBrowserRouter([
     element: <App />,
     children: [
       { index: true, element: <Home /> },
-      { path: "profile", element: <Profile /> },
+      {
+        path: "profile",
+        element: (
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        ),
+      },
       { path: "map", element: <MapPage /> },
-      { path: "inbox", element: <Message /> },
-      { path: "listings", element: <Listings /> },
+      {
+        path: "inbox",
+        element: (
+          <ProtectedRoute>
+            <Message />
+          </ProtectedRoute>
+        ),
+      },
       { path: "listing/:id", element: <ListingDetail /> },
-      { path: "listing/create", element: <CreateListings /> },
-      { path: "meetup", element: <SafeMeetup /> },
-      { path: "help", element: <Help /> },
+      {
+        path: "listing/create",
+        element: (
+          <ProtectedRoute>
+            <CreateListings />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "meetup",
+        element: (
+          <ProtectedRoute>
+            <SafeMeetup />
+          </ProtectedRoute>
+        ),
+      },
+      { path: "/login&signup", element: <Login /> },
     ],
   },
-  { path: "/login&signup", element: <Login /> },
+  
 ]);
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <SearchProvider>
-      <RouterProvider router={router} />
-    </SearchProvider>
+    <AuthProvider>
+      <SearchProvider>
+        <RouterProvider router={router} />
+      </SearchProvider>
+    </AuthProvider>
   </React.StrictMode>
 );
