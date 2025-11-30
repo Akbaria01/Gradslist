@@ -13,6 +13,7 @@ import ListingDetail from "./pages/ListingDetail.jsx";
 import CreateListings from "./pages/CreateListings.jsx";
 import Login from "./pages/Login&Signup.jsx";
 import SafeMeetup from "./pages/SafeMeetup.jsx";
+import Help from "./pages/Help.jsx";
 
 import { SearchProvider } from "./context/SearchContext.jsx";
 import MapPage from "./pages/Map.jsx";
@@ -30,6 +31,7 @@ const router = createBrowserRouter([
       { path: "listing/:id", element: <ListingDetail /> },
       { path: "listing/create", element: <CreateListings /> },
       { path: "meetup", element: <SafeMeetup /> },
+      { path: "help", element: <Help /> },
     ],
   },
   { path: "/login&signup", element: <Login /> },

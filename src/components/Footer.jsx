@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 export default function Footer() {
   const year = new Date().getFullYear();
 
@@ -8,6 +10,11 @@ export default function Footer() {
           © {year} Gradslist • Buy. Sell. Go.
         </p>
         <p className="mt-1">Created for UNCC Capstone Project</p>
+        <div className="mt-2">
+          <Link to="/help" className="text-blue-600 hover:text-blue-800 underline">
+            Help & Support
+          </Link>
+        </div>
       </div>
     </footer>
   );
