@@ -12,6 +12,7 @@ export default function CreateListings() {
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState("");
+  const [subcategory, setSubcategory] = useState("");
   const [condition, setCondition] = useState("");
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
@@ -25,17 +26,75 @@ export default function CreateListings() {
     };
   }, [imagePreview]);
 
-  const CATEGORY_OPTIONS = [
-    "Electronics & Media",
-    "Home & Garden",
-    "Clothing, Shoes, & Accessories",
-    "Baby & Kids",
-    "Vehicles",
-    "Sports & Outdoors",
-    "Collectibles & Art",
-    "Pet supplies",
-    "More",
-  ];
+  const CATEGORY_OPTIONS = {
+  "Electronics & Media": [
+    "Phones & Accessories",
+    "Computers & Laptops",
+    "Cameras & Photo",
+    "Video Games & Consoles",
+    "Audio Equipment",
+    "TVs & Home Theater",
+  ],
+  "Home & Garden": [
+    "Furniture",
+    "Kitchen & Dining",
+    "Appliances",
+    "Decor",
+    "Lawn & Garden",
+    "Tools",
+  ],
+  "Clothing, Shoes, & Accessories": [
+    "Women’s Clothing",
+    "Men’s Clothing",
+    "Shoes",
+    "Jewelry & Watches",
+    "Bags & Accessories",
+  ],
+  "Baby & Kids": [
+    "Baby Gear",
+    "Kids’ Clothing",
+    "Toys",
+    "Strollers & Car Seats",
+    "Nursery Furniture",
+  ],
+  Vehicles: ["Cars", "Trucks", "Motorcycles", "Auto Parts", "Tires & Wheels"],
+  "Toys, Games, & Hobbies": [
+    "Board Games",
+    "Action Figures",
+    "Trading Cards",
+    "Crafts & Hobbies",
+    "Puzzles",
+    "Outdoor Toys",
+  ],
+  "Sports & Outdoors": [
+    "Exercise Equipment",
+    "Bicycles",
+    "Camping & Hiking",
+    "Fishing",
+    "Team Sports Gear",
+  ],
+  "Collectibles & Art": [
+    "Paintings & Prints",
+    "Antiques",
+    "Vintage Items",
+    "Handmade Art",
+    "Memorabilia",
+  ],
+  "Pet supplies": [
+    "Dog Supplies",
+    "Cat Supplies",
+    "Fish & Reptile",
+    "Bird Supplies",
+    "Pet Food",
+  ],
+  More: [
+    "Books & Stationery",
+    "Musical Instruments",
+    "Health & Beauty",
+    "Office Supplies",
+    "Miscellaneous",
+  ],
+};
 
   const CONDITION_OPTIONS = [
     "New",
@@ -127,6 +186,8 @@ export default function CreateListings() {
           price: Number(price) || price,
           description,
           category,
+          subcategory,
+          subcategoryLower: subcategory.toLowerCase(),
           condition,
           location,
           image: imageURL || null,
@@ -184,16 +245,38 @@ export default function CreateListings() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
                 <select
                   value={category}
-                  onChange={(e) => setCategory(e.target.value)}
+                  onChange={(e) => {
+                    setCategory(e.target.value);
+                    setSubcategory(""); // reset subcategory when category changes
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="">Select a category</option>
-                  {CATEGORY_OPTIONS.map((opt) => (
+
+                  {Object.keys(CATEGORY_OPTIONS).map((opt) => (
                     <option key={opt} value={opt}>
                       {opt}
                     </option>
                   ))}
                 </select>
+                {/* Subcategory */}
+                {category && CATEGORY_OPTIONS[category] && (
+                  <div className="mt-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Subcategory</label>
+                      <select
+                        value={subcategory}
+                        onChange={(e) => setSubcategory(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="">Select a subcategory</option>
+                        {CATEGORY_OPTIONS[category].map((sub) => (
+                          <option key={sub} value={sub}>
+                            {sub}
+                          </option>
+                      ))}
+                    </select>
+                  </div>
+                  )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Condition</label>

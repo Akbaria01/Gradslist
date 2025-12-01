@@ -111,6 +111,7 @@ export default function Home() {
 
   // Helper: run a query and return mapped products
   const runAndMap = async (q) => {
+
     const snap = await getDocs(q);
     const results = [];
     snap.forEach((doc) => {
@@ -145,143 +146,158 @@ export default function Home() {
   // Fetch listings from Firestore depending on selectedFilter and search
 
   const fetchListings = useCallback(
-    async (filter = selectedFilter, search = searchQuery) => {
-      try {
+  async (filter = selectedFilter, search = searchQuery) => {
+    try {
       let finalResults = [];
 
-        // Build search range for prefix-search on 'title' if search text exists
-        const hasSearch = typeof search === "string" && search.trim().length > 0;
-        const s = hasSearch ? search.trim() : null;
+      // normalize search
+      const hasSearch =
+        typeof search === "string" && search.trim().length > 0;
+      const s = hasSearch ? search.trim().toLowerCase() : null;
 
-      
-        const buildQueryWithEquality = (field, value) => {
-          let qRef = collection(db, "listings");
-          if (value == null) {
-           
-            try {
-              return query(qRef, orderBy("createdAt", "desc"), limit(1000));
-            } catch {
-              return query(qRef, limit(1000));
-            }
-          } else {
-            // equality on given field
-            if (hasSearch) {
-              // title prefix range
-              const start = s;
-              const end = s + "\uf8ff";
-              try {
-                return query(
-                  qRef,
-                  where(field, "==", value),
-                  where("title", ">=", start.toLocaleLowerCase()),
-                  where("title", "<=", end.toLocaleLowerCase()),
-                  orderBy("titleLower"),
-                  limit(1000)
-                );
-              } catch {
-                // If the above needs an index or fails, fall back to equality-only
-                return query(qRef, where(field, "==", value), limit(1000));
-              }
-            } else {
-              return query(qRef, where(field, "==", value), limit(1000));
-            }
-          }
-        };
+      // Firestore query builder
+      const buildEqualityQuery = (field, value) => {
+        const ref = collection(db, "listings");
 
-        // Case 1: no filter, maybe a search -> run prefix search or fetch all
-        if (!filter) {
-          if (hasSearch) {
-            // search by title prefix
-            const start = s;
-            const end = s + "\uf8ff";
-            try {
-              const q = query(
-                collection(db, "listings"),
-                where("titleLower", ">=", start.toLocaleLowerCase()),
-                where("titleLower", "<=", end.toLocaleLowerCase()),
-                orderBy("titleLower"),
-                limit(1000)
-              );
-              finalResults = await runAndMap(q);
-            } catch {
-              // fallback: fetch all and client-side filter (only if Firestore query not possible)
-              const qAll = query(collection(db, "listings"), limit(1000));
-              const all = await runAndMap(qAll);
-              finalResults = all.filter((p) =>
-                p.item.toLowerCase().includes(s.toLowerCase())
-              );
-            }
-          } else {
-            // fetch all listings (limit to reasonable count)
-            const q = (() => {
-              try {
-                return query(
-                  collection(db, "listings"),
-                  orderBy("createdAt", "desc"),
-                  limit(1000)
-                );
-              } catch {
-                return query(collection(db, "listings"), limit(1000));
-              }
-            })();
-            finalResults = await runAndMap(q);
-          }
-        } else {
-          // Case 2: filter present -> try subcategory first, then category
-  
-          const qSub = buildQueryWithEquality("subcategory", filter);
-          const subRes = await runAndMap(qSub);
-
-          if (subRes.length > 0) {
-            finalResults = subRes;
-            // If search exists but we got results, use them (we're enforcing backend results)
-          } else {
-            // Try category == filter
-            const qCat = buildQueryWithEquality("category", filter);
-            const catRes = await runAndMap(qCat);
-            finalResults = catRes;
-          }
-
-          // If both returned empty but there's a search, we may try searching globally AND filter client-side
-          if (finalResults.length === 0 && hasSearch) {
-            // global title prefix search
-            try {
-              const start = s;
-              const end = s + "\uf8ff";
-              const q = query(
-                collection(db, "listings"),
-                where("titleLower", ">=", start.toLocaleLowerCase()),
-                where("titleLower", "<=", end.toLocaleLowerCase()),
-                orderBy("titleLower"),
-                limit(1000)
-              );
-              const globalSearch = await runAndMap(q);
-              // filter client-side for category/subcategory text match (fallback)
-              finalResults = globalSearch.filter(
-                (p) =>
-                  (p._raw?.subcategory === filter ||
-                    p._raw?.category === filter) ||
-                  false
-              );
-            } catch {
-              // final fallback: nothing
-              finalResults = [];
-            }
+        if (!value) {
+          try {
+            return query(ref, orderBy("createdAt", "desc"), limit(1000));
+          } catch {
+            return query(ref, limit(1000));
           }
         }
 
-        // Set results (this is the single source of truth for UI)
+        if (hasSearch) {
+          const start = s;
+          const end = s + "\uf8ff";
+
+          try {
+            return query(
+              ref,
+              where(field, "==", value),
+              where("titleLower", ">=", start),
+              where("titleLower", "<=", end),
+              orderBy("titleLower"),
+              limit(1000)
+            );
+          } catch {
+            return query(ref, where(field, "==", value), limit(1000));
+          }
+        } else {
+          return query(ref, where(field, "==", value), limit(1000));
+        }
+      };
+
+      // -----------------------------
+      // CASE 1 — NO FILTER
+      // -----------------------------
+      if (!filter) {
+        if (hasSearch) {
+          // search by prefix
+          try {
+            const q = query(
+              collection(db, "listings"),
+              where("titleLower", ">=", s),
+              where("titleLower", "<=", s + "\uf8ff"),
+              orderBy("titleLower"),
+              limit(1000)
+            );
+            finalResults = await runAndMap(q);
+          } catch {
+            const qAll = query(collection(db, "listings"), limit(1000));
+            const all = await runAndMap(qAll);
+            finalResults = all.filter((p) =>
+              p.name?.toLowerCase().includes(s)
+            );
+          }
+        } else {
+          // fetch all
+          const q = (() => {
+            try {
+              return query(
+                collection(db, "listings"),
+                orderBy("createdAt", "desc"),
+                limit(1000)
+              );
+            } catch {
+              return query(collection(db, "listings"), limit(1000));
+            }
+          })();
+
+          finalResults = await runAndMap(q);
+        }
+
         setProducts(finalResults);
-        // Reset to page 1 every time new backend data arrives
         setCurrentPage(1);
-      } catch (err) {
-        console.error("Failed to fetch listings from Firestore:", err);
-        setProducts([]); // safe fallback
+        return;
       }
-    },
-    
-    [selectedFilter, searchQuery]
-  );
+
+      // -----------------------------
+      // CASE 2 — FILTER ACTIVE
+      // Fix = lowercase compare fallback
+      // -----------------------------
+
+      const normalizedFilter = filter.toLowerCase();
+
+      // Try subcategory first
+      const qSub = query(
+        collection(db, "listings"),
+        where("subcategoryLower", "==", normalizedFilter),
+        limit(1000)
+      );
+
+      let subResults = await runAndMap(qSub);
+
+      if (subResults.length === 0) {
+        // fallback: manually match lowercase
+        const qAll = query(collection(db, "listings"), limit(1000));
+        const all = await runAndMap(qAll);
+
+        subResults = all.filter((p) => {
+          const raw = p._raw || {};
+          return (
+            raw.subcategory?.toLowerCase() === normalizedFilter ||
+            raw.category?.toLowerCase() === normalizedFilter
+          );
+        });
+      }
+
+      finalResults = subResults;
+
+      // If still empty AND search is active, do global search
+      if (finalResults.length === 0 && hasSearch) {
+        try {
+          const q = query(
+            collection(db, "listings"),
+            where("titleLower", ">=", s),
+            where("titleLower", "<=", s + "\uf8ff"),
+            orderBy("titleLower"),
+            limit(1000)
+          );
+
+          const global = await runAndMap(q);
+          finalResults = global.filter((p) => {
+            const raw = p._raw || {};
+            return (
+              raw.subcategory?.toLowerCase() === normalizedFilter ||
+              raw.category?.toLowerCase() === normalizedFilter
+            );
+          });
+        } catch {
+          finalResults = [];
+        }
+      }
+
+      setProducts(finalResults);
+      setCurrentPage(1);
+    } catch (err) {
+      console.error("Failed to fetch listings:", err);
+      setProducts([]);
+    }
+  },
+  [selectedFilter, searchQuery]
+);
+
 
   // Fetch on mount (load ALL listings)
   useEffect(() => {
@@ -298,11 +314,10 @@ export default function Home() {
   // When selectedFilter changes due to clicking subcategory, fetchListings will be called
   // We call fetchListings on click handler directly to ensure clicking same filter re-fetches
   const handleSubcategoryClick = async (sub) => {
-    // set the selected filter (UI)
-    setSelectedFilter(sub);
-    // re-run fetch (always hits backend even if same filter)
-    await fetchListings(sub, searchQuery);
-  };
+  const normalized = sub.toLowerCase();
+  setSelectedFilter(normalized);
+  await fetchListings(normalized, searchQuery);
+};
 
   // -------------------------
   // Pagination (client-side slice of backend results)
@@ -582,3 +597,5 @@ export default function Home() {
     </div>
   );
 }
+
+
