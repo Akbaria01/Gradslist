@@ -14,7 +14,6 @@ const initialConversations = [
     listingPrice: "$2,200",
     listingCondition: "used - good",
     listingSeller: "Alex Johnson",
-    listingPosted: "november 28, 2025",
     listingPosted: "November 28, 2025",
     listingLocation: "Charlotte, NC",
     listingDescription:
@@ -150,7 +149,6 @@ function Message() {
       from: "me",
       text,
       time: "Just now",
-      time: "just now",
     };
 
     setConversations((prev) =>
@@ -161,7 +159,6 @@ function Message() {
               messages: [...c.messages, newMessage],
               lastMessage: text,
               lastTimestamp: "Just now",
-              lastTimestamp: "just now",
               unreadCount: 0,
             }
           : c
@@ -182,20 +179,18 @@ function Message() {
 
   return (
     <div className="flex h-screen bg-gray-100">
-      {/* Sidebar */}
       {/* sidebar */}
       <div
         className={`${
           isSidebarOpen ? "w-56" : "w-0"
-        } bg-white border-r flex flex-col transition-all duration-300 overflow-hidden`}
+        } bg-white border-r flex flex-col transition-all duration-300`}
       >
         <div className="bg-[#395A7F] text-white p-4">
           <h1 className="text-lg font-semibold">Inbox</h1>
         </div>
 
-        {/* Chat List */}
         {/* chat list */}
-        <div className="overflow-y-auto flex-1">
+        <div className="flex-1">
           {conversations.map((conv) => {
             const isActive = conv.id === selectedId;
             return (
@@ -223,12 +218,12 @@ function Message() {
                     </h2>
 
                     {/* Last message preview */}
-                    <p className="text-xs text-gray-600 truncate">
+                    <p className="text-xs text-gray-600 leading-snug break-words whitespace-normal">
                       {conv.lastMessage}
                     </p>
 
                     {/* Listing + timestamp on their own lines so nothing gets cut */}
-                    <p className="text-[11px] text-gray-400 mt-1 truncate">
+                    <p className="text-[11px] text-gray-400 mt-1 leading-snug break-words whitespace-normal">
                       {conv.listingTitle}
                     </p>
                     <p className="text-[11px] text-gray-500">
@@ -249,16 +244,13 @@ function Message() {
       </div>
 
       {/* Main Chat Area */}
-      {/* main chat area */}
       <div className="flex-1 flex flex-col">
         {activeConversation ? (
           <>
             {/* Chat Header */}
-            {/* chat header */}
             <div className="bg-white border-b px-6 py-4 flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 {/* Sidebar toggle from main header */}
-                {/* sidebar toggle */}
                 <button
                   type="button"
                   className="mr-2 text-gray-500 border rounded-full w-8 h-8 flex items-center justify-center hover:bg-gray-100"
@@ -291,7 +283,6 @@ function Message() {
             </div>
 
             {/* Messages */}
-            {/* messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               <div className="flex justify-center mb-2">
                 <span className="text-xs text-gray-500">
@@ -344,7 +335,6 @@ function Message() {
             </div>
 
             {/* Message Input */}
-            {/* message input */}
             <form
               onSubmit={handleSendMessage}
               className="bg-white border-t px-4 py-3 flex items-center space-x-3"
@@ -352,7 +342,6 @@ function Message() {
               <input
                 type="text"
                 placeholder="Type a message..."
-                placeholder="type a message..."
                 className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#395A7F]"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
@@ -362,14 +351,12 @@ function Message() {
                 className="bg-[#395A7F] text-white px-6 py-2 rounded-lg hover:bg-[#A3CAE9] transition-colors"
               >
                 Send
-                send
               </button>
             </form>
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center text-gray-500 text-sm">
             Select a conversation from the left to start messaging.
-            select a conversation from the left to start messaging.
           </div>
         )}
       </div>
