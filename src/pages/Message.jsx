@@ -15,6 +15,7 @@ const initialConversations = [
     listingCondition: "used - good",
     listingSeller: "Alex Johnson",
     listingPosted: "november 28, 2025",
+    listingPosted: "November 28, 2025",
     listingLocation: "Charlotte, NC",
     listingDescription:
       "2016 red bike, runs smooth, recently serviced. clean title and ready to ride.",
