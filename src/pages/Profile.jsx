@@ -3,7 +3,8 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { doc, getDoc, collection, query, where, getDocs, deleteDoc } from "firebase/firestore";
-import { db } from "../firebase";
+import { db, app } from "../firebase";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import Modal from "../components/Modal";
 
 export default function Profile() {
@@ -14,6 +15,9 @@ export default function Profile() {
   const [profileName, setProfileName] = useState("User");
   const [profileEmail, setProfileEmail] = useState("");
   const [profileRating, setProfileRating] = useState(0);
+  const [profilePic, setProfilePic] = useState("");
+  const [imagePreview, setImagePreview] = useState("");
+  const [pfpUploading, setPfpUploading] = useState(false);
   const [userListings, setUserListings] = useState([]);
   const [savedItems, setSavedItems] = useState([]);
   const [reviewsToLeave, setReviewsToLeave] = useState([]);
@@ -22,7 +26,13 @@ export default function Profile() {
   const [loadingReviews, setLoadingReviews] = useState(true);
   const [deleteMessage, setDeleteMessage] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-
+  useEffect(() => {
+    return () => {
+      if (imagePreview && imagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
   // Load user data from Firestore "users" collection
   useEffect(() => {
     const loadUserProfile = async () => {
@@ -36,10 +46,14 @@ export default function Profile() {
           const data = snap.data();
           setProfileName(data.username || currentUser.displayName || "User");
           setProfileEmail(data.email || currentUser.email || "");
+          setProfilePic(data.profilePic || "");
+          setImagePreview(data.profilePic || "");
         } else {
-          // fallback to auth info if no doc (shouldn't usually happen now)
+          // fallback to auth info if no doc
           setProfileName(currentUser.displayName || "User");
           setProfileEmail(currentUser.email || "");
+          setProfilePic("");
+          setImagePreview("");
         }
       } catch (err) {
         console.error("Failed to load user profile:", err);
@@ -209,7 +223,7 @@ export default function Profile() {
   const user = {
     name: profileName,
     email: profileEmail,
-    profilePic: "",
+    profilePic: imagePreview || profilePic,
     ratingCount: 0,
   };
 
@@ -354,6 +368,43 @@ export default function Profile() {
       } 
     });
   };
+  const handleProfileImageChange = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file || !currentUser) return;
+  
+    // local preview
+    if (imagePreview && imagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(imagePreview);
+    }
+    const blobUrl = URL.createObjectURL(file);
+    setImagePreview(blobUrl);
+  
+    setPfpUploading(true);
+    try {
+      const storage = getStorage(app);
+      const destPath = `profilePics/${currentUser.uid}/${Date.now()}_${file.name}`;
+      const fileRef = storageRef(storage, destPath);
+      await uploadBytes(fileRef, file);
+      const downloadURL = await getDownloadURL(fileRef);
+  
+      // Save to Firestore
+      await setDoc(
+        doc(db, "users", currentUser.uid),
+        { profilePic: downloadURL },
+        { merge: true }
+      );
+  
+      setProfilePic(downloadURL);
+      setImagePreview(downloadURL);
+    } catch (err) {
+      console.error("Failed to update profile image:", err);
+      setDeleteMessage("Failed to update profile photo. Please try again.");
+      setShowDeleteModal(true);
+    } finally {
+      setPfpUploading(false);
+    }
+  };
+  
 
   return (
     <div className="bg-[#eaecef] min-h-screen p-6">
@@ -374,31 +425,54 @@ export default function Profile() {
         </div>
 
         {/* Profile Box */}
-        <div
-          className="flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-200"
-          style={{ width: "260px", height: "100px" }}
-        >
-          {user.profilePic ? (
-            <img
-              src={user.profilePic}
-              className="w-20 h-20 rounded-full object-cover"
-            />
-          ) : (
-            <div className="w-20 h-20 rounded-full bg-gray-200" />
-          )}
-          <div className="flex flex-col justify-center h-full">
-            <p className="text-lg font-semibold text-gray-900">{user.name}</p>
-            {user.email && (
-              <p className="text-xs text-gray-500 truncate">{user.email}</p>
-            )}
-            <button 
-              onClick={() => navigate("/viewprofile")}
-              className="text-sm text-sky-600 hover:underline mt-1"
-            >
-              View Profile
-            </button>
-          </div>
+        {/* Profile Box */}
+<div
+  className="flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-200"
+  style={{ width: "260px", height: "100px" }}
+>
+  <div className="relative">
+    <label className="block cursor-pointer">
+      {user.profilePic ? (
+        <img
+          src={user.profilePic}
+          className="w-20 h-20 rounded-full object-cover"
+          alt="Profile"
+        />
+      ) : (
+        <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center text-[10px] text-gray-500">
+          No Photo
         </div>
+      )}
+
+      <input
+        type="file"
+        accept="image/png,image/jpeg"
+        className="hidden"
+        onChange={handleProfileImageChange}
+      />
+    </label>
+
+    {pfpUploading && (
+      <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] text-gray-500">
+        Updating…
+      </span>
+    )}
+  </div>
+
+  <div className="flex flex-col justify-center h-full">
+    <p className="text-lg font-semibold text-gray-900">{user.name}</p>
+    {user.email && (
+      <p className="text-xs text-gray-500 truncate">{user.email}</p>
+    )}
+    <button
+      onClick={() => navigate("/viewprofile")}
+      className="text-sm text-sky-600 hover:underline mt-1"
+    >
+      View Profile
+    </button>
+  </div>
+</div>
+
 
         {/* Rating Box */}
         <div
