@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { addDoc, collection, serverTimestamp, doc, getDoc } from "firebase/firestore";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, app } from "../firebase";
+import Modal from "../components/Modal";
 
 export default function CreateListings() {
   const navigate = useNavigate();
@@ -19,6 +20,8 @@ export default function CreateListings() {
   const [errors, setErrors] = useState({});
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   React.useEffect(() => {
     return () => {
       // cleanup created object URL when component unmounts
@@ -115,6 +118,10 @@ export default function CreateListings() {
     const e = {};
     if (!title.trim()) e.title = "Title is required";
     if (!price.trim()) e.price = "Price is required";
+    if (!category.trim()) e.category = "Category is required";
+    if (!condition.trim()) e.condition = "Condition is required";
+    if (!location.trim()) e.location = "Location is required";
+    if (!description.trim()) e.description = "Description is required";
     return e;
   }
 
@@ -122,7 +129,10 @@ export default function CreateListings() {
     evt.preventDefault();
     const e = validate();
     setErrors(e);
-    if (Object.keys(e).length) return;
+    if (Object.keys(e).length) {
+      setShowModal(true);
+      return;
+    }
     // require logged-in user
     if (!currentUser) {
       // redirect to login
@@ -198,8 +208,11 @@ export default function CreateListings() {
 
         const docRef = await addDoc(collection(db, "listings"), payload);
 
-        // navigate to detail with the new doc id and payload (include id)
-        navigate(`/listing/${docRef.id}`, { state: { listing: { id: docRef.id, ...payload } } });
+        // Show success modal before navigating
+        setShowSuccessModal(true);
+        setTimeout(() => {
+          navigate(`/listing/${docRef.id}`, { state: { listing: { id: docRef.id, ...payload } } });
+        }, 3000);
       } catch (err) {
         console.error("Failed to create listing:", err);
         setErrors({ submit: "Failed to create listing. Try again." });
@@ -222,7 +235,7 @@ export default function CreateListings() {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Enter your value"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 {errors.title && <div className="text-xs text-red-500 mt-1">{errors.title}</div>}
               </div>
@@ -233,7 +246,7 @@ export default function CreateListings() {
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
                   placeholder="Enter your price"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 {errors.price && <div className="text-xs text-red-500 mt-1">{errors.price}</div>}
               </div>
@@ -308,7 +321,7 @@ export default function CreateListings() {
                     onChange={(e) => setLocation(e.target.value)}
                     placeholder="Loading map..."
                     disabled
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-black"
                   />
                 ) : (
                   <CityAutocomplete value={location} onChange={(v) => setLocation(v)} />
@@ -324,7 +337,7 @@ export default function CreateListings() {
                 rows={4}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
               />
             </div>
           </div>
@@ -376,6 +389,16 @@ export default function CreateListings() {
             </div>
           </div>
       </form>
+      <Modal 
+        message="Please Enter All Fields" 
+        isVisible={showModal} 
+        onClose={() => setShowModal(false)} 
+      />
+      <Modal 
+        message="Listing Created Successfully!" 
+        isVisible={showSuccessModal} 
+        onClose={() => setShowSuccessModal(false)} 
+      />
     </div>
   );
 }
