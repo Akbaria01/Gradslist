@@ -81,8 +81,11 @@ export default function CityAutocomplete({ value = '', onChange = () => {} }) {
         onFocus={() => { setOpen(true); if (input) query(input); }}
         onBlur={handleBlur}
         placeholder="Enter city"
-        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-      />
+        className="w-full px-3 py-2 border border-gray-300 rounded-md 
+                  !bg-white !text-black !opacity-100
+                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+/>
+
 
       {/* suggestions dropdown */}
       {open && predictions.length > 0 && (
