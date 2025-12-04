@@ -381,7 +381,7 @@ export default function CreateListings() {
             <div className="flex justify-center">
               <button
                 type="submit"
-                className="mt-6 text-white font-semibold py-3 px-16 rounded-lg transition duration-200 hover:opacity-90"
+                className="mt-6 text-white font-semibold py-3 px-16 rounded-lg transition duration-200 hover:opacity-60"
                 style={{ backgroundColor: '#395A7F' }}
               >
                 Submit

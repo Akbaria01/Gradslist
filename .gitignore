@@ -140,3 +140,7 @@ vite.config.ts.timestamp-*
 
 #package lock
 package-lock.json
+# macOS junk files
+.DS_Store
+src/.DS_Store
+

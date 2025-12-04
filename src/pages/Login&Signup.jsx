@@ -274,7 +274,7 @@ export default function Login() {
              <button
                type="submit"
                disabled={isSubmitting}
-               className="w-full py-2 px-4 text-[15px] font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60"
+               className="w-full py-2 px-4 text-[15px] font-medium rounded-md text-white bg-[#395A7F]  hover:bg-[#A3CAE9] disabled:opacity-60"
              >
                {isSubmitting ? "Logging in..." : "Login"}
              </button>
@@ -322,7 +322,7 @@ export default function Login() {
                type="text"
                value={signupUsername}
                onChange={(e) => setSignupUsername(e.target.value)}
-               className="w-full border border-slate-300 px-4 py-3 rounded-md"
+               className="w-full text-sm border border-slate-300 px-4 py-3 rounded-md"
                placeholder="Choose a username"
              />
            </div>
@@ -332,7 +332,7 @@ export default function Login() {
                type="email"
                value={signupEmail}
                onChange={(e) => setSignupEmail(e.target.value)}
-               className="w-full border border-slate-300 px-4 py-3 rounded-md"
+               className="w-full text-sm border border-slate-300 px-4 py-3 rounded-md"
                placeholder="Enter your email"
              />
            </div>
@@ -342,7 +342,7 @@ export default function Login() {
                type="password"
                value={signupPassword}
                onChange={(e) => setSignupPassword(e.target.value)}
-               className="w-full border border-slate-300 px-4 py-3 rounded-md"
+               className="w-full text-sm border border-slate-300 px-4 py-3 rounded-md"
                placeholder="Create password"
              />
            </div>
@@ -352,7 +352,7 @@ export default function Login() {
                type="password"
                value={signupConfirm}
                onChange={(e) => setSignupConfirm(e.target.value)}
-               className="w-full border border-slate-300 px-4 py-3 rounded-md"
+               className="w-full text-sm border border-slate-300 px-4 py-3 rounded-md"
                placeholder="Confirm password"
              />
            </div>
@@ -360,7 +360,7 @@ export default function Login() {
              <button
                type="submit"
                disabled={isSubmitting}
-               className="w-full py-2 px-4 text-[15px] font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60"
+               className="w-full py-2 px-4 text-[15px] font-medium rounded-md text-white bg-[#395A7F]  hover:bg-[#A3CAE9] disabled:opacity-60"
              >
                {isSubmitting ? "Creating account..." : "Sign Up"}
              </button>

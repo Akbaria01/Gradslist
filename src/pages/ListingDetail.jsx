@@ -8,6 +8,8 @@ import { useAuth } from '../context/AuthContext';
 export default function ListingDetail() {
   const { id } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [listing, setListing] = useState(location.state?.listing || null);
   const [loading, setLoading] = useState(!listing);
   const [error, setError] = useState(null);
@@ -111,6 +113,8 @@ export default function ListingDetail() {
   if (error) return <div className="p-6 text-red-500">Error: {error}</div>;
   if (!listing) return <div className="p-6">Listing not found</div>;
 
+
+
   // Helper to format Firestore Timestamp or Date-like objects
   function formatTimestamp(ts) {
     if (!ts) return 'Unknown';
@@ -186,6 +190,32 @@ export default function ListingDetail() {
     }
     return 'Unknown';
   })();
+  //
+  const handleContactSeller = () => {
+    // (optional) if routes to /inbox are already protected, this is just extra safety
+    if (!currentUser) {
+      navigate("/login&signup");
+      return;
+    }
+  
+    // send listing + seller info to Inbox via route state
+    navigate("/inbox", {
+      state: {
+        fromListing: {
+          listingId: listing.id,
+          title,
+          price: Number(listing.price || 0),
+          condition: listing.condition || "",
+          sellerId: listing.sellerId || null,
+          sellerName,
+          postedString: createdAtString,
+          locationString,
+          description: listing.description || "",
+          image: listing.image,
+        },
+      },
+    });
+  };
 
   // readable title and createdAt
   const title = listing?.title || listing?.item || 'Untitled';
@@ -233,6 +263,14 @@ export default function ListingDetail() {
                       <span className="text-base text-gray-600">${Number(listing.price || 0)}</span>
                     </div>
 
+          <div className="mt-6">
+            <button
+              onClick={handleContactSeller}
+              className="w-full bg-[#395A7F] text-white py-3 rounded-md font-semibold"
+            >
+              Contact Seller
+            </button>
+          </div>
                     <div className="mb-3">
                       <span className="text-base text-gray-600">Condition: </span>
                       <span className="text-base text-gray-600">{listing.condition || 'Unknown'}</span>
