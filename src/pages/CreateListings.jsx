@@ -1,31 +1,41 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import CityAutocomplete from "../components/CityAutocomplete";
 import { useLoadScript } from "@react-google-maps/api";
 import { useAuth } from "../context/AuthContext";
-import { addDoc, collection, serverTimestamp, doc, getDoc } from "firebase/firestore";
+import { addDoc, collection, serverTimestamp, doc, getDoc, updateDoc } from "firebase/firestore";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, app } from "../firebase";
 import Modal from "../components/Modal";
 
 export default function CreateListings() {
   const navigate = useNavigate();
-  const [title, setTitle] = useState("");
-  const [price, setPrice] = useState("");
-  const [category, setCategory] = useState("");
-  const [subcategory, setSubcategory] = useState("");
-  const [condition, setCondition] = useState("");
-  const [location, setLocation] = useState("");
-  const [description, setDescription] = useState("");
+  const location = useLocation();
+  
+  // Check if we're in edit mode
+  const { editMode, listingData } = location.state || {};
+  
+  // Initialize form state with either empty values or existing data
+  const [title, setTitle] = useState(editMode ? listingData?.title || "" : "");
+  const [price, setPrice] = useState(editMode ? listingData?.price?.toString() || "" : "");
+  const [category, setCategory] = useState(editMode ? listingData?.category || "" : "");
+  const [subcategory, setSubcategory] = useState(editMode ? listingData?.subcategory || "" : "");
+  const [condition, setCondition] = useState(editMode ? listingData?.condition || "" : "");
+  const [locationValue, setLocationValue] = useState(editMode ? listingData?.location || "" : "");
+  const [description, setDescription] = useState(editMode ? listingData?.description || "" : "");
   const [errors, setErrors] = useState({});
   const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState("");
+  const [imagePreview, setImagePreview] = useState(editMode ? listingData?.image || "" : "");
   const [showModal, setShowModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   React.useEffect(() => {
     return () => {
       // cleanup created object URL when component unmounts
-      if (imagePreview) URL.revokeObjectURL(imagePreview);
+      if (imagePreview && imagePreview.startsWith('blob:')) {
+        URL.revokeObjectURL(imagePreview);
+      }
     };
   }, [imagePreview]);
 
@@ -114,13 +124,18 @@ export default function CreateListings() {
 
   const { currentUser } = useAuth();
 
+  // Set page title based on mode
+  useEffect(() => {
+    document.title = editMode ? "Edit Listing" : "Create Listing";
+  }, [editMode]);
+
   function validate() {
     const e = {};
     if (!title.trim()) e.title = "Title is required";
     if (!price.trim()) e.price = "Price is required";
     if (!category.trim()) e.category = "Category is required";
     if (!condition.trim()) e.condition = "Condition is required";
-    if (!location.trim()) e.location = "Location is required";
+    if (!locationValue.trim()) e.location = "Location is required";
     if (!description.trim()) e.description = "Description is required";
     return e;
   }
@@ -140,10 +155,13 @@ export default function CreateListings() {
       return;
     }
 
+    setIsSubmitting(true);
+
     (async () => {
       try {
         // optional image upload to Firebase Storage
-        let imageURL = "";
+        let imageURL = imagePreview && !imagePreview.startsWith('blob:') ? imagePreview : "";
+        
         if (imageFile) {
           try {
             console.log("Preparing to upload image", {
@@ -168,12 +186,14 @@ export default function CreateListings() {
             imageURL = await getDownloadURL(fileRef);
             console.log("Got downloadURL:", imageURL);
           } catch (uploadErr) {
-            // more verbose logging for debugging client-side upload failures (CORS / auth / network)
             console.error("Image upload failed:", uploadErr?.code || uploadErr, uploadErr?.message || "");
-            // fail gracefully: continue without image so listing can still be created
-            imageURL = null;
-            // surface a non-blocking error to the user
-            setErrors((prev) => ({ ...prev, upload: "Image upload failed; listing created without image." }));
+            // If we're editing and already have an image URL, keep it
+            if (!imageURL && editMode && listingData?.image) {
+              imageURL = listingData.image;
+            } else {
+              imageURL = null;
+            }
+            setErrors((prev) => ({ ...prev, upload: "Image upload failed; listing saved without new image." }));
           }
         }
 
@@ -199,14 +219,28 @@ export default function CreateListings() {
           subcategory,
           subcategoryLower: subcategory.toLowerCase(),
           condition,
-          location,
+          location: locationValue,
           image: imageURL || null,
           sellerId: currentUser.uid,
           seller: sellerName || null,
-          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
         };
 
-        const docRef = await addDoc(collection(db, "listings"), payload);
+        // Add createdAt only for new listings
+        if (!editMode) {
+          payload.createdAt = serverTimestamp();
+        }
+
+        let docRef;
+        
+        if (editMode && listingData?.id) {
+          // Update existing listing
+          await updateDoc(doc(db, "listings", listingData.id), payload);
+          docRef = { id: listingData.id };
+        } else {
+          // Create new listing
+          docRef = await addDoc(collection(db, "listings"), payload);
+        }
 
         // Show success modal before navigating
         setShowSuccessModal(true);
@@ -214,15 +248,19 @@ export default function CreateListings() {
           navigate(`/listing/${docRef.id}`, { state: { listing: { id: docRef.id, ...payload } } });
         }, 3000);
       } catch (err) {
-        console.error("Failed to create listing:", err);
-        setErrors({ submit: "Failed to create listing. Try again." });
+        console.error("Failed to save listing:", err);
+        setErrors({ submit: `Failed to ${editMode ? 'update' : 'create'} listing. Try again.` });
+      } finally {
+        setIsSubmitting(false);
       }
     })();
   }
 
   return (
     <div className="bg-gray-100 p-8">
-      <h2 className="text-3xl font-bold text-gray-900 mb-8">Item For Sale</h2>
+      <h2 className="text-3xl font-bold text-gray-900 mb-8">
+        {editMode ? "Edit Listing" : "Item For Sale"}
+      </h2>
       <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Form Section */}
           <div className="space-y-6">
@@ -317,14 +355,14 @@ export default function CreateListings() {
                 ) : !isLoaded ? (
                   <input
                     type="text"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
+                    value={locationValue}
+                    onChange={(e) => setLocationValue(e.target.value)}
                     placeholder="Loading map..."
                     disabled
                     className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-black"
                   />
                 ) : (
-                  <CityAutocomplete value={location} onChange={(v) => setLocation(v)} />
+                  <CityAutocomplete value={locationValue} onChange={(v) => setLocationValue(v)} />
                 )}
               </div>
             </div>
@@ -381,12 +419,28 @@ export default function CreateListings() {
             <div className="flex justify-center">
               <button
                 type="submit"
+                disabled={isSubmitting}
+                className={`mt-6 text-white font-semibold py-3 px-16 rounded-lg transition duration-200 hover:opacity-90 ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
                 className="mt-6 text-white font-semibold py-3 px-16 rounded-lg transition duration-200 hover:opacity-60"
                 style={{ backgroundColor: '#395A7F' }}
               >
-                Submit
+                {isSubmitting ? 'Saving...' : (editMode ? 'Update Listing' : 'Submit')}
               </button>
             </div>
+            
+            {/* Cancel Button for Edit Mode */}
+            {editMode && (
+              <div className="flex justify-center mt-4">
+                <button
+                  type="button"
+                  onClick={() => navigate(-1)}
+                  className="text-gray-700 font-semibold py-2 px-8 rounded-lg transition duration-200 hover:bg-gray-200"
+                  style={{ border: '1px solid #395A7F' }}
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
           </div>
       </form>
       <Modal 
@@ -395,7 +449,7 @@ export default function CreateListings() {
         onClose={() => setShowModal(false)} 
       />
       <Modal 
-        message="Listing Created Successfully!" 
+        message={`Listing ${editMode ? 'Updated' : 'Created'} Successfully!`} 
         isVisible={showSuccessModal} 
         onClose={() => setShowSuccessModal(false)} 
       />

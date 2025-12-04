@@ -18,6 +18,7 @@ import MyListings from "./pages/MyListings.jsx";
 import SavedItems from "./pages/SavedItems.jsx";
 import LeaveReview from "./pages/LeaveReview.jsx";
 import ViewProfile from "./pages/ViewProfile.jsx";
+import Review from "./pages/Review.jsx";
 
 
 import { SearchProvider } from "./context/SearchContext.jsx";
@@ -103,6 +104,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <ViewProfile />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "review",
+        element: (
+          <ProtectedRoute>
+            <Review />
           </ProtectedRoute>
         ),
       },
