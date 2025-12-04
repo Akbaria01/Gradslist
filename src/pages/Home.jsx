@@ -1,5 +1,5 @@
 // src/pages/Home.jsx
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useSearch } from "../context/SearchContext"; 
 import {
@@ -121,8 +121,6 @@ export default function Home() {
         id: doc.id,
         // UI expects `name` for the card title — map from title/name
         name: data.title ?? data.name ?? "Untitled",
-        // keep brand separate; don't fall back to description
-        brand: data.brand ?? data.subtitle ?? "",
         price:
           data.price !== undefined
             ? typeof data.price === "number"
@@ -329,6 +327,33 @@ export default function Home() {
     startIndex,
     startIndex + itemsPerPage
   );
+
+  // Small helper to render star rating
+  function renderStars(ratingValue = 4) {
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      stars.push(
+        <span
+          key={i}
+          className={`text-sm ${i <= ratingValue ? 'text-yellow-400' : 'text-gray-300'}`}>
+          ★
+        </span>
+      );
+    }
+    return stars;
+  }
+
+  // Precompute a stable random rating (3-5) and distance (1.0-6.0) per product id while products list changes
+  const randomMeta = useMemo(() => {
+    const map = {};
+    filteredProducts.forEach((p) => {
+      const id = p.id || JSON.stringify(p).slice(0, 8);
+      const rating = Math.floor(Math.random() * 3) + 3; // 3..5
+      const distance = (Math.random() * 5 + 1).toFixed(1); // 1.0..6.0
+      map[id] = { rating, distance };
+    });
+    return map;
+  }, [filteredProducts]);
   
 
   // Keep all JSX identical to original — only data source changed
@@ -422,49 +447,91 @@ export default function Home() {
           </div>
         </div>
         
-        {/* Listing cards */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 px-6">
-          {currentProducts.map((product) => (
-            <div
-              key={product.id}
-              className="group relative flex flex-col rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+              {/* Listing cards */}
+<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 px-6">
+  {currentProducts.map((product) => {
+    const meta = randomMeta[product.id] || { rating: 4, distance: '2.3' };
+    const sellerName = product._raw?.seller || product._raw?.sellerName || 'Seller';
+    const city = (product._raw?.location || '')
+      .toString()
+      .replace(/\n+/g, ' ')
+      .split(',')[0]
+      .replace(/\s+/g, ' ')
+      .trim() || 'Unknown';
+
+    return (
+      <div
+        key={product.id}
+        className="group relative flex flex-col h-full rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+      >
+        {/* Username + stars above image */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-gray-200" />
+            <div className="text-sm font-medium text-gray-900">{sellerName}</div>
+          </div>
+          <div className="text-sm">{renderStars(meta.rating)}</div>
+        </div>
+
+        {/* Image left, info right on larger screens */}
+        <div className="flex flex-col md:flex-row gap-4 h-full items-stretch">
+          {/* Image: force full height so row children match */}
+          <div className="md:w-1/2 w-full overflow-hidden rounded-lg bg-gray-100 h-[220px] md:h-full">
+            <img
+              src={product.image}
+              alt={product.alt}
+              className="h-full w-full object-cover transition group-hover:scale-105"
+            />
+          </div>
+
+          {/* Info column: full height + evenly spaced vertically */}
+          <div className="flex-1 flex flex-col justify-between md:py-1 h-full">
+            {/* Top block: title + price + location */}
+            <div>
+              <h3
+               className="text-lg font-semibold text-gray-900 h-[48px]"
+              style={{
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden'
+              }}
             >
-              <div className="aspect-square w-full overflow-hidden rounded-lg bg-gray-100">
-                <img
-                  src={product.image}
-                  alt={product.alt}
-                  className="h-full w-full object-cover transition group-hover:scale-105"
-                />
-              </div>
-              <div className="mt-4 flex flex-1 flex-col">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-900">
-                      {product.name}
-                    </h3>
-                    <p className="mt-1 text-xs text-gray-500">{product.brand}</p>
-                  </div>
-                  <p className="text-sm font-bold text-gray-900">
-                    {product.price}
-                  </p>
-                </div>
-                <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
-                  <span>Posted {product.posted}</span>
-                  <span>{product.distance}</span>
-                </div>
+              {product.name || product.title || 'Untitled'}
+              </h3>
+
+              <p className="mt-2 text-sm font-bold text-gray-900">{product.price}</p>
+              <p className="mt-1 text-xs text-gray-500">Location: {city}</p>
+            </div>
+
+            {/* Bottom block: uniform placement */}
+            <div className="pt-2">
+              <div className="text-xs text-gray-500">Posted {product.posted}</div>
+              <div className="mt-1 text-xs text-gray-500">Distance: {meta.distance} mi</div>
+
+              <div className="mt-3">
                 <button
                   onClick={() => {
-                    const payload = product._raw ? { id: product.id, ...product._raw } : { id: product.id, ...product };
+                    const payload = product._raw
+                      ? { id: product.id, ...product._raw }
+                      : { id: product.id, ...product };
                     navigate(`/listing/${product.id}`, { state: { listing: payload } });
                   }}
-                  className="mt-4 inline-flex items-center justify-center rounded-lg bg-[#395A7F] px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-[#A3CAE9]"
+                  className="w-full inline-flex items-center justify-center rounded-lg bg-[#395A7F] px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-[#A3CAE9]"
                 >
                   View details
                 </button>
               </div>
             </div>
-          ))}
+          </div>
         </div>
+      </div>
+    );
+  })}
+</div>
+
+
+        
 
         {/* Pagination */}
         <div className="flex items-center justify-center mt-8 mb-16 px-6">
