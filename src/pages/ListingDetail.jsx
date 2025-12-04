@@ -345,10 +345,6 @@ export default function ListingDetail() {
                   <span className="text-base text-gray-600">Condition: </span>
                   <span className="text-base text-gray-600">{listing.condition || 'Unknown'}</span>
                 </div>
-                    <div className="mb-3">
-                      <span className="text-base text-gray-600">Condition: </span>
-                      <span className="text-base text-gray-600">{listing.condition || 'Unknown'}</span>
-                    </div>
 
                 <div className="mb-3">
                   <span className="text-base text-gray-600">Location: </span>
