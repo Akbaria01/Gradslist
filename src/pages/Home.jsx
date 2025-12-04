@@ -1,7 +1,8 @@
 // src/pages/Home.jsx
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useSearch } from "../context/SearchContext"; 
+import { Menu, X } from "lucide-react";
 import {
   collection,
   query,
@@ -87,6 +88,7 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState(1);
   const [activeCategory, setActiveCategory] = useState(null);
   const [selectedFilter, setSelectedFilter] = useState(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -121,8 +123,6 @@ export default function Home() {
         id: doc.id,
         // UI expects `name` for the card title — map from title/name
         name: data.title ?? data.name ?? "Untitled",
-        // keep brand separate; don't fall back to description
-        brand: data.brand ?? data.subtitle ?? "",
         price:
           data.price !== undefined
             ? typeof data.price === "number"
@@ -329,15 +329,43 @@ export default function Home() {
     startIndex,
     startIndex + itemsPerPage
   );
+
+  // Small helper to render star rating
+  function renderStars(ratingValue = 4) {
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      stars.push(
+        <span
+          key={i}
+          className={`text-sm ${i <= ratingValue ? 'text-yellow-400' : 'text-gray-300'}`}>
+          ★
+        </span>
+      );
+    }
+    return stars;
+  }
+
+  // Precompute a stable random rating (3-5) and distance (1.0-6.0) per product id while products list changes
+  const randomMeta = useMemo(() => {
+    const map = {};
+    filteredProducts.forEach((p) => {
+      const id = p.id || JSON.stringify(p).slice(0, 8);
+      const rating = Math.floor(Math.random() * 3) + 3; // 3..5
+      const distance = (Math.random() * 5 + 1).toFixed(1); // 1.0..6.0
+      map[id] = { rating, distance };
+    });
+    return map;
+  }, [filteredProducts]);
   
 
   // Keep all JSX identical to original — only data source changed
   return (
-    <div className="bg-[#eaecef] min-h-screen">
+    <div className="bg-[#eaecef] min-h-screen overflow-x-hidden">
       {/* -------- SUBHEADER -------- */}
       <div className="bg-[#eaecef] border-b border-gray-300 shadow-sm w-full">
-        <div className="py-4 px-10">
-          <nav className="flex flex-nowrap gap-x-8 justify-center relative">
+        <div className="py-4 px-4 lg:px-10">
+          {/* Desktop Navigation */}
+          <nav className="hidden lg:flex flex-nowrap gap-x-8 justify-center relative">
             {Object.keys(CATEGORY_OPTIONS).map((category) => (
               <div key={category} className="relative group">
                 {/* CATEGORY LABEL */}
@@ -345,23 +373,22 @@ export default function Home() {
                   {category}
                 </span>
 
-
                 {/* FIXED DROPDOWN  */}
                 <ul
-                  className="
-                    absolute left-0 mt-2 w-48 bg-white shadow-lg rounded-md
+                  className={`
+                    absolute mt-2 w-48 bg-white shadow-lg rounded-md
                     opacity-0 invisible 
                     group-hover:opacity-100 group-hover:visible 
                     transition-all duration-200 z-50
                     pointer-events-auto
-                  "
+                    ${category === 'More' ? 'right-0' : 'left-0'}
+                  `}
                 >
                   {CATEGORY_OPTIONS[category].map((sub) => (
                     <li
                       key={sub}
                       className="px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
                       onClick={() => {
-                        // Use the handler that ALWAYS fetches backend (even if clicking same)
                         handleSubcategoryClick(sub);
                         setCurrentPage(1);
                       }}
@@ -373,30 +400,67 @@ export default function Home() {
               </div>
             ))}
           </nav>
+
+          {/* Mobile Navigation */}
+          <div className="lg:hidden">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700">Categories</span>
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="p-2 text-gray-700 hover:text-gray-900"
+              >
+                {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+              </button>
+            </div>
+
+            {/* Mobile Menu Dropdown */}
+            {isMobileMenuOpen && (
+              <div className="mt-4 bg-white rounded-lg shadow-lg border border-gray-200 max-h-96 overflow-y-auto">
+                {Object.keys(CATEGORY_OPTIONS).map((category) => (
+                  <div key={category} className="border-b border-gray-100 last:border-b-0">
+                    <div
+                      className="px-4 py-3 text-sm font-medium text-gray-900 bg-gray-50 cursor-pointer"
+                      onClick={() => setActiveCategory(activeCategory === category ? null : category)}
+                    >
+                      <div className="flex items-center justify-between">
+                        {category}
+                        <span className={`transform transition-transform ${activeCategory === category ? 'rotate-180' : ''}`}>
+                          ▼
+                        </span>
+                      </div>
+                    </div>
+                    {activeCategory === category && (
+                      <div className="bg-white">
+                        {CATEGORY_OPTIONS[category].map((sub) => (
+                          <div
+                            key={sub}
+                            className="px-6 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer border-l-2 border-transparent hover:border-blue-500"
+                            onClick={() => {
+                              handleSubcategoryClick(sub);
+                              setCurrentPage(1);
+                              setIsMobileMenuOpen(false);
+                              setActiveCategory(null);
+                            }}
+                          >
+                            {sub}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
-      {/* ---------- NO RESULTS MESSAGE GOES HERE ---------- */}
-      {products.length === 0 && (
-        <div className="text-center py-16 text-gray-600 text-lg">
-          {selectedFilter ? (
-            <>
-              <p>No items listed under:</p>
-              <p className="font-semibold">{selectedFilter}</p>
-            </>
-          ) : (
-            <p>No items listed</p>
-          )}
-        </div>
-      )}
-
-
       {/* Main content */}
-      <div>
+      <div className={`pt-2 ${products.length === 0 ? 'min-h-[calc(100vh-80px)] flex flex-col' : ''}`}>
         {/* Title + Filter + Sort */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between mb-6 px-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between mb-6 px-4 lg:px-6">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-              Trending products
+              {selectedFilter ? selectedFilter.charAt(0).toUpperCase() + selectedFilter.slice(1) : 'Trending products'}
             </h1>
             <p className="mt-1 text-sm text-gray-600">
               Browse items posted near you.
@@ -407,67 +471,126 @@ export default function Home() {
             <button
               type="button"
               onClick={() => setIsFilterOpen(true)}
-              className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-1 focus:ring-sky-500 hover:bg-gray-50 flex items-center justify-between"
             >
-              <span className="mr-2 inline-block h-4 w-4 rotate-45 border-b-2 border-r-2 border-gray-500" />
               Filters
+              <span className="ml-2 inline-block h-2 w-2 rotate-45 border-b border-r border-gray-500" />
             </button>
 
-            <select className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-1 focus:ring-sky-500">
-              <option value="recent">Sort: Most recent</option>
-              <option value="lowToHigh">Price: Low to High</option>
-              <option value="highToLow">Price: High to Low</option>
-              <option value="nearest">Nearest distance</option>
-            </select>
+            <div className="relative">
+              <select className="rounded-lg border border-gray-300 bg-white px-3 py-2 pr-8 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-1 focus:ring-sky-500 appearance-none">
+                <option value="recent">Sort: Most recent</option>
+                <option value="lowToHigh">Price: Low to High</option>
+                <option value="highToLow">Price: High to Low</option>
+                <option value="nearest">Nearest distance</option>
+              </select>
+              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 inline-block h-2 w-2 rotate-45 border-b border-r border-gray-500 pointer-events-none" />
+            </div>
           </div>
         </div>
         
-        {/* Listing cards */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 px-6">
-          {currentProducts.map((product) => (
-            <div
-              key={product.id}
-              className="group relative flex flex-col rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+        {/* ---------- NO RESULTS MESSAGE GOES HERE ---------- */}
+        {products.length === 0 && (
+          <div className="text-center py-16 text-gray-600 text-xl px-4">
+            {selectedFilter ? (
+              <>
+                <p>No items listed under:</p>
+                <p className="font-semibold">{selectedFilter}</p>
+              </>
+            ) : (
+              <p>No items listed</p>
+            )}
+          </div>
+        )}
+        
+              {/* Listing cards */}
+<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 px-4 lg:px-6">
+  {currentProducts.map((product) => {
+    const meta = randomMeta[product.id] || { rating: 4, distance: '2.3' };
+    const sellerName = product._raw?.seller || product._raw?.sellerName || 'Seller';
+    const city = (product._raw?.location || '')
+      .toString()
+      .replace(/\n+/g, ' ')
+      .split(',')[0]
+      .replace(/\s+/g, ' ')
+      .trim() || 'Unknown';
+
+    return (
+      <div
+        key={product.id}
+        className="group relative flex flex-col h-full rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+      >
+        {/* Username + stars above image */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-gray-200" />
+            <div className="text-sm font-medium text-gray-900">{sellerName}</div>
+          </div>
+          <div className="text-sm">{renderStars(meta.rating)}</div>
+        </div>
+
+        {/* Image left, info right on larger screens */}
+        <div className="flex flex-col md:flex-row gap-4 h-full items-stretch">
+          {/* Image: force full height so row children match */}
+          <div className="md:w-1/2 w-full overflow-hidden rounded-lg bg-gray-100 h-[220px] md:h-full">
+            <img
+              src={product.image}
+              alt={product.alt}
+              className="h-full w-full object-cover transition group-hover:scale-105"
+            />
+          </div>
+
+          {/* Info column: full height + evenly spaced vertically */}
+          <div className="flex-1 flex flex-col justify-between md:py-1 h-full">
+            {/* Top block: title + price + location */}
+            <div>
+              <h3
+               className="text-lg font-semibold text-gray-900 h-[48px]"
+              style={{
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden'
+              }}
             >
-              <div className="aspect-square w-full overflow-hidden rounded-lg bg-gray-100">
-                <img
-                  src={product.image}
-                  alt={product.alt}
-                  className="h-full w-full object-cover transition group-hover:scale-105"
-                />
-              </div>
-              <div className="mt-4 flex flex-1 flex-col">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-900">
-                      {product.name}
-                    </h3>
-                    <p className="mt-1 text-xs text-gray-500">{product.brand}</p>
-                  </div>
-                  <p className="text-sm font-bold text-gray-900">
-                    {product.price}
-                  </p>
-                </div>
-                <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
-                  <span>Posted {product.posted}</span>
-                  <span>{product.distance}</span>
-                </div>
+              {product.name || product.title || 'Untitled'}
+              </h3>
+
+              <p className="mt-2 text-sm font-bold text-gray-900">{product.price}</p>
+              <p className="mt-1 text-xs text-gray-500">Location: {city}</p>
+            </div>
+
+            {/* Bottom block: uniform placement */}
+            <div className="pt-2">
+              <div className="text-xs text-gray-500">Posted {product.posted}</div>
+              <div className="mt-1 text-xs text-gray-500">Distance: {meta.distance} mi</div>
+
+              <div className="mt-3">
                 <button
                   onClick={() => {
-                    const payload = product._raw ? { id: product.id, ...product._raw } : { id: product.id, ...product };
+                    const payload = product._raw
+                      ? { id: product.id, ...product._raw }
+                      : { id: product.id, ...product };
                     navigate(`/listing/${product.id}`, { state: { listing: payload } });
                   }}
-                  className="mt-4 inline-flex items-center justify-center rounded-lg bg-[#395A7F] px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-[#A3CAE9]"
+                  className="w-full inline-flex items-center justify-center rounded-lg bg-[#395A7F] px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-[#A3CAE9]"
                 >
                   View details
                 </button>
               </div>
             </div>
-          ))}
+          </div>
         </div>
+      </div>
+    );
+  })}
+</div>
+
+
+        
 
         {/* Pagination */}
-        <div className="flex items-center justify-center mt-8 mb-16 px-6">
+        <div className={`flex items-center justify-center px-4 lg:px-6 ${products.length === 0 ? 'mt-auto mb-8' : 'mt-8 mb-16'}`}>
           <nav className="flex items-center space-x-2">
             <button
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}

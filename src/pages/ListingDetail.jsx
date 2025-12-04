@@ -13,6 +13,9 @@ export default function ListingDetail() {
   const [listing, setListing] = useState(location.state?.listing || null);
   const [loading, setLoading] = useState(!listing);
   const [error, setError] = useState(null);
+  const { currentUser } = useAuth();
+  const navigate = useNavigate();
+
 
   // Always fetch the canonical listing from Firestore so fields like createdAt are resolved
   useEffect(() => {
@@ -42,6 +45,8 @@ export default function ListingDetail() {
   // Map center state: default to Charlotte
   const [center, setCenter] = useState({ lat: 35.2271, lng: -80.8431 });
   const [markerPos, setMarkerPos] = useState(null);
+  // Random-ish items sold count (stable per mount)
+  const [itemsSold] = useState(() => Math.floor(Math.random() * 6) + 5);
 
   // When listing changes, pick a center/marker. If listing.location has lat/lng use it.
   // Otherwise if it's a string, attempt a best-effort geocode via Google Maps API when available.
@@ -148,6 +153,21 @@ export default function ListingDetail() {
     }
   }
 
+  // Small helper to render star rating
+  function renderStars(ratingValue = 4) {
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      stars.push(
+        <span
+          key={i}
+          className={`text-xl ${i <= ratingValue ? 'text-yellow-400' : 'text-gray-300'}`}>
+          ★
+        </span>
+      );
+    }
+    return stars;
+  }
+
   // Determine readable seller name
   const sellerName = (() => {
     if (!listing) return 'Unknown';
@@ -201,29 +221,47 @@ export default function ListingDetail() {
   const title = listing?.title || listing?.item || 'Untitled';
   const createdAtString = formatDateOnly(listing?.createdAt || listing?.posted);
 
-  // Rich detail layout: large image/gallery left, details on right
+  // Rich detail layout: include a sticky top bar with Back button
   return (
-    <main className="p-6 max-w-6xl mx-auto">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <div className="w-full rounded-lg overflow-hidden bg-gray-100">
-            <img
-              src={listing.image}
-              alt={title}
-              className="w-full h-[480px] object-cover"
-            />
+    <div className="bg-[#eaecef] min-h-screen">
+      {/* Sticky top bar — safe-area aware for iOS */}
+      <div className="sticky top-0 z-40" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+        <div className="bg-[#eaecef] border-b border-gray-200">
+          <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+            <button
+              type="button"
+              aria-label="Back to home"
+              onClick={() => navigate('/')}
+              className={`rounded-lg px-4 py-2 text-sm font-medium shadow-sm ${"bg-[#2E4C6E] hover:bg-[#243c58] text-white"}`}>
+              Back
+            </button>
+
+            <h1 className="text-3xl font-bold text-gray-900 text-center flex-1 mx-4">{title}</h1>
+
+            <div className="w-24" /> {/* Placeholder to balance flex */}
           </div>
-          {/* Optionally: thumbnails or gallery would go here */}
         </div>
+      </div>
 
-        <aside className="lg:col-span-1">
-          <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-          {listing.brand && <div className="text-sm text-gray-600 mt-1">{listing.brand}</div>}
-          <div className="mt-4 text-3xl font-extrabold text-gray-900">${Number(listing.price || 0)}</div>
+      <main className="p-6 max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left column: image + details */}
+              <div>
+                <div className="w-full rounded-lg overflow-hidden bg-gray-100">
+                  <img
+                    src={listing.image}
+                    alt={title}
+                    className="w-full h-[480px] object-cover"
+                  />
+                </div>
 
-          <div className="mt-4 flex items-center gap-3">
-            <div className="text-base text-gray-600">Condition: {listing.condition}</div>
-          </div>
+                <section className="mt-6 bg-white p-6 rounded shadow-sm">
+                  <h2 className="text-lg font-semibold mb-2">Details</h2>
+                  <div className="text-gray-700">
+                    <div className="mb-3">
+                      <span className="text-base text-gray-600">Price: </span>
+                      <span className="text-base text-gray-600">${Number(listing.price || 0)}</span>
+                    </div>
 
           <div className="mt-6">
             <button
@@ -233,32 +271,52 @@ export default function ListingDetail() {
               Contact Seller
             </button>
           </div>
+                    <div className="mb-3">
+                      <span className="text-base text-gray-600">Condition: </span>
+                      <span className="text-base text-gray-600">{listing.condition || 'Unknown'}</span>
+                    </div>
 
-          <div className="mt-6 text-base text-gray-600">
-            <div>Seller: {sellerName}</div>
-            <div>Posted: {createdAtString}</div>
-            <div>Location: {locationString}</div>
-            {listing.distance && <div>Distance: {listing.distance}</div>}
-          </div>
-        </aside>
-      </div>
+                    <div className="mb-3">
+                      <span className="text-base text-gray-600">Location: </span>
+                      <span className="text-base text-gray-600">{locationString}</span>
+                    </div>
 
-      <section className="mt-8 bg-white p-6 rounded shadow-sm">
-        <h2 className="text-lg font-semibold mb-2">Description</h2>
-        <p className="text-gray-700 whitespace-pre-line">{listing.description || 'No description provided.'}</p>
-      </section>
+                    <div className="mt-4">
+                      <h3 className="text-lg font-semibold mb-2">Description</h3>
+                      <p className="text-gray-700 whitespace-pre-line">{listing.description || 'No description provided.'}</p>
+                    </div>
+                  </div>
+                </section>
+              </div>
 
-      <section className="mt-8 bg-white p-6 rounded shadow-sm">
-        <h2 className="text-lg font-semibold mb-2">Location</h2>
-        <div className="flex justify-center">
-          <MapComponent
-            center={center}
-            zoom={11}
-            markers={markerPos ? [{ id: listing.id || 'listing', position: markerPos, title }] : []}
-            height="320px"
-          />
-        </div>
-      </section>
-    </main>
+              {/* Right column: seller card, contact button, map */}
+              <aside>
+                <div className="bg-white p-6 rounded-xl shadow-sm flex flex-col items-center">
+                  <div className="w-24 h-24 rounded-full bg-gray-200 mb-4" />
+                  <div className="text-lg font-semibold text-gray-900">{sellerName}</div>
+                  <div className="mt-2 flex">{renderStars(4)}</div>
+                  <div className="mt-2 text-sm text-gray-500">(4.0)</div>
+                  <div className="mt-2 text-sm text-gray-600">Items sold: {itemsSold}</div>
+                </div>
+
+                <div className="mt-6">
+                  <button className="w-full bg-[#395A7F] text-white py-3 rounded-md font-semibold">Contact Seller</button>
+                </div>
+
+                <div className="mt-6 bg-white p-6 rounded shadow-sm">
+                  <h2 className="text-lg font-semibold mb-2">Location</h2>
+                  <div className="flex justify-center">
+                    <MapComponent
+                      center={center}
+                      zoom={11}
+                      markers={markerPos ? [{ id: listing.id || 'listing', position: markerPos, title }] : []}
+                      height="320px"
+                    />
+                  </div>
+                </div>
+              </aside>
+            </div>
+          </main>
+    </div>
   );
 }

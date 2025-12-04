@@ -4,7 +4,8 @@ import { doSignInUserWithEmailAndPassword, doSignInWithGoogle, doCreateUserWithE
 import { useAuth } from "../context/AuthContext";
 import { updateProfile } from "firebase/auth";
 import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
-import { db, auth } from "../firebase"; 
+import { db, auth } from "../firebase";
+import Modal from "../components/Modal"; 
 
 
 export default function Login() {
@@ -27,6 +28,10 @@ export default function Login() {
  const [signupPassword, setSignupPassword] = useState("");
  const [signupConfirm, setSignupConfirm] = useState("");
  const [signupError, setSignupError] = useState("");
+ const [showSuccessModal, setShowSuccessModal] = useState(false);
+ const [showSignupSuccessModal, setShowSignupSuccessModal] = useState(false);
+ const [loginSuccess, setLoginSuccess] = useState(false);
+ const [signupSuccess, setSignupSuccess] = useState(false);
 
 
  // Simple email validation pattern
@@ -34,7 +39,7 @@ export default function Login() {
 
 
  // If user is already logged in, redirect away from auth page
- if (userLoggedIn) {
+ if (userLoggedIn && !loginSuccess && !signupSuccess) {
    return <Navigate to="/" replace />;
  }
 
@@ -71,7 +76,11 @@ export default function Login() {
 
    try {
      await doSignInUserWithEmailAndPassword(loginEmail, loginPassword);
-     // AuthContext will update and redirect protected routes
+     setLoginSuccess(true);
+     setShowSuccessModal(true);
+     setTimeout(() => {
+       setLoginSuccess(false);
+     }, 3000);
    } catch (err) {
      console.error(err);
      setLoginError("Invalid email or password.");
@@ -121,7 +130,11 @@ export default function Login() {
      }
 
 
-     // AuthContext will handle redirect
+     setLoginSuccess(true);
+     setShowSuccessModal(true);
+     setTimeout(() => {
+       setLoginSuccess(false);
+     }, 3000);
    } catch (err) {
      console.error(err);
      setLoginError("Failed to sign in with Google.");
@@ -165,7 +178,8 @@ export default function Login() {
 
 
    setIsSubmitting(true);
-
+   setSignupSuccess(true);
+   setShowSignupSuccessModal(true);
 
    try {
      // Create the Firebase user
@@ -191,8 +205,9 @@ export default function Login() {
        });
      }
 
-
-     // AuthContext will update after onAuthStateChanged
+     setTimeout(() => {
+       setSignupSuccess(false);
+     }, 3000);
    } catch (err) {
      console.error(err);
      setSignupError("Unable to create account.");
@@ -205,6 +220,16 @@ export default function Login() {
 
  return (
    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-120px)] py-10 px-4">
+     <Modal 
+       message="Login Successful" 
+       isVisible={showSuccessModal} 
+       onClose={() => setShowSuccessModal(false)} 
+     />
+     <Modal 
+       message="Sign Up Successful" 
+       isVisible={showSignupSuccessModal} 
+       onClose={() => setShowSignupSuccessModal(false)} 
+     />
      {/* Wrapper for both cards */}
      <div className="flex flex-col md:flex-row justify-center gap-8 w-full max-w-5xl">
         {/* SIGN IN CARD */}
@@ -284,7 +309,7 @@ export default function Login() {
         {/* SIGN UP CARD (FIXED POSITION) */}
        <div className="flex-1 p-6 sm:p-8 rounded-2xl bg-white border border-gray-200 shadow-md">
          <h1 className="text-slate-900 text-center text-3xl font-semibold">
-           Sign up
+           Sign Up
          </h1>
           {signupError && (
            <p className="mt-4 text-sm text-red-600 text-center">{signupError}</p>
@@ -301,7 +326,6 @@ export default function Login() {
                placeholder="Choose a username"
              />
            </div>
-            {/* Email */}
            <div>
              <label className="text-sm font-medium">Email</label>
              <input
@@ -312,7 +336,6 @@ export default function Login() {
                placeholder="Enter your email"
              />
            </div>
-            {/* Password */}
            <div>
              <label className="text-sm font-medium">Password</label>
              <input
@@ -323,7 +346,6 @@ export default function Login() {
                placeholder="Create password"
              />
            </div>
-            {/* Confirm Password */}
            <div>
              <label className="text-sm font-medium">Confirm password</label>
              <input
@@ -334,7 +356,7 @@ export default function Login() {
                placeholder="Confirm password"
              />
            </div>
-            <div className="!mt-12">
+           <div className="!mt-12">
              <button
                type="submit"
                disabled={isSubmitting}
@@ -348,4 +370,4 @@ export default function Login() {
      </div>
    </div>
  );
-} 
+}
