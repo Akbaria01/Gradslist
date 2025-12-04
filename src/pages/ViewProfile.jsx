@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { doSignOut } from "../auth";
@@ -22,6 +23,9 @@ import {
 export default function ViewProfile() {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const { uid: paramUid } = useParams();
+
+  const uid = paramUid || currentUser?.uid;
 
   const [profileData, setProfileData] = useState({
     name: "User",
@@ -53,11 +57,11 @@ export default function ViewProfile() {
 
   // Load profile
   useEffect(() => {
-    if (!currentUser) return;
+    if (!uid) return;
 
     const loadProfile = async () => {
       try {
-        const userRef = doc(db, "users", currentUser.uid);
+        const userRef = doc(db, "users", uid);
         const snap = await getDoc(userRef);
         if (snap.exists()) {
           const data = snap.data();
@@ -89,13 +93,13 @@ export default function ViewProfile() {
 
   // Load reviews
   useEffect(() => {
-    if (!currentUser) return;
+    if (!uid) return;
 
     const loadReviews = async () => {
       try {
         const q = query(
           collection(db, "reviews"),
-          where("reviewedUserId", "==", currentUser.uid)
+          where("reviewedUserId", "==",uid)
         );
         const querySnapshot = await getDocs(q);
         const revs = querySnapshot.docs.map((doc) => doc.data());

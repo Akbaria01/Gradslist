@@ -465,7 +465,7 @@ export default function Profile() {
       <p className="text-xs text-gray-500 truncate">{user.email}</p>
     )}
     <button
-      onClick={() => navigate("/viewprofile")}
+      onClick={() => navigate(`/viewprofile/${currentUser?.uid}`)}
       className="text-sm text-sky-600 hover:underline mt-1"
     >
       View Profile
