@@ -20,6 +20,7 @@ import LeaveReview from "./pages/LeaveReview.jsx";
 import ViewProfile from "./pages/ViewProfile.jsx";
 import Review from "./pages/Review.jsx";
 
+
 import { SearchProvider } from "./context/SearchContext.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import ProtectedRoute from "./components/protectedRoute.jsx";
@@ -38,7 +39,14 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
-      { path: "map", element: <MapPage /> },
+      { 
+        path: "map", 
+        element: (
+          <ProtectedRoute>
+             <MapPage /> 
+          </ProtectedRoute>
+          ), 
+        },
       {
         path: "inbox",
         element: (
@@ -56,6 +64,7 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
+
       {
         path: "meetup",
         element: (
