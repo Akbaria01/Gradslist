@@ -13,8 +13,6 @@ export default function ListingDetail() {
   const [listing, setListing] = useState(location.state?.listing || null);
   const [loading, setLoading] = useState(!listing);
   const [error, setError] = useState(null);
-  const { currentUser } = useAuth();
-  const navigate = useNavigate();
   const [isSaved, setIsSaved] = useState(false);
   const [saving, setSaving] = useState(false);
 
