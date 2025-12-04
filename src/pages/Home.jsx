@@ -401,7 +401,7 @@ export default function Home() {
             ))}
           </nav>
 
-          {/* Mobile Navigation */}
+          {/* Responsive Navigation */}
           <div className="lg:hidden">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-700">Categories</span>
@@ -413,7 +413,7 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Mobile Menu Dropdown */}
+            {/* Responsive Dropdown */}
             {isMobileMenuOpen && (
               <div className="mt-4 bg-white rounded-lg shadow-lg border border-gray-200 max-h-96 overflow-y-auto">
                 {Object.keys(CATEGORY_OPTIONS).map((category) => (
@@ -455,7 +455,7 @@ export default function Home() {
         </div>
       </div>
       {/* Main content */}
-      <div className={`pt-2 ${products.length === 0 ? 'min-h-[calc(100vh-80px)] flex flex-col' : ''}`}>
+      <div className="pt-2 min-h-[calc(100vh-200px)] flex flex-col">
         {/* Title + Filter + Sort */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between mb-6 px-4 lg:px-6">
           <div>
@@ -589,8 +589,12 @@ export default function Home() {
 
         
 
-        {/* Pagination */}
-        <div className={`flex items-center justify-center px-4 lg:px-6 ${products.length === 0 ? 'mt-auto mb-8' : 'mt-8 mb-16'}`}>
+        <div className="flex-1"></div>
+      </div>
+      
+      {/* Pagination - only show when subcategory is selected */}
+      {true && (
+        <div className="flex items-center justify-center px-4 lg:px-6 py-8">
           <nav className="flex items-center space-x-2">
             <button
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
@@ -621,7 +625,7 @@ export default function Home() {
             </button>
           </nav>
         </div>
-      </div>
+      )}
 
       {/* Filter Modal */}
       {isFilterOpen && (
