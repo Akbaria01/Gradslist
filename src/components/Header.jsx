@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Home, User, MapPin, MessageSquare, Pencil, Search } from "lucide-react";
+import { Home, User, MapPin, MessageSquare, Pencil, Search, Menu, X } from "lucide-react";
 import { useSearch } from "../context/SearchContext";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth, db } from "../firebase";
@@ -24,6 +24,7 @@ export default function Header() {
 
   const [suggestions, setSuggestions] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const inputRef = useRef(null);
   const dropdownRef = useRef(null);
@@ -139,8 +140,8 @@ export default function Header() {
         )}
       </div>
 
-      {/* RIGHT — Nav Icons */}
-      <nav className="header-nav">
+      {/* RIGHT — Nav Icons (desktop) */}
+      <nav className="header-nav header-nav-desktop">
         <Link to="/" state={{ resetHome: true }} className="header-nav-link">
           <Home size={28} />
           <span>Home</span>
@@ -166,6 +167,70 @@ export default function Header() {
           <span>List</span>
         </Link>
       </nav>
+
+      {/* Mobile menu button */}
+      <button
+        className="mobile-menu-button"
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+      >
+        {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+      </button>
+
+      {/* Mobile menu */}
+      {isMobileMenuOpen && (
+        <div className="mobile-menu">
+          {/* Mobile nav links */}
+          <nav className="mobile-nav">
+            <Link 
+              to="/" 
+              state={{ resetHome: true }} 
+              className="mobile-nav-link"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <Home size={24} />
+              <span>Home</span>
+            </Link>
+
+            <button 
+              onClick={() => {
+                handleProfileClick();
+                setIsMobileMenuOpen(false);
+              }} 
+              className="mobile-nav-link"
+            >
+              <User size={24} />
+              <span>Profile</span>
+            </button>
+
+            <Link 
+              to="/map" 
+              className="mobile-nav-link"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <MapPin size={24} />
+              <span>Map</span>
+            </Link>
+
+            <Link 
+              to="/inbox" 
+              className="mobile-nav-link"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <MessageSquare size={24} />
+              <span>Inbox</span>
+            </Link>
+
+            <Link 
+              to="/listing/create" 
+              className="mobile-nav-link"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <Pencil size={24} />
+              <span>List</span>
+            </Link>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }

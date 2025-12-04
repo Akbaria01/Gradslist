@@ -1,11 +1,18 @@
 .header {
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 12px 24px;
   background: white;
   border-bottom: 1px solid #ddd;
-   height: 70px; 
+  height: 70px;
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 12px 16px;
+  }
 }
 
 .header-left {
@@ -22,6 +29,12 @@
   transform: none;
 }
 
+@media (max-width: 768px) {
+  .header-logo {
+    height: 80px;
+  }
+}
+
 
 .header-search-container {
   position: relative;
@@ -33,6 +46,34 @@
   padding: 8px 16px;
   width: 350px;
   transition: box-shadow 0.2s ease;
+}
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .header-search-container {
+    width: 280px;
+  }
+}
+
+/* Small tablet */
+@media (max-width: 768px) {
+  .header-search-container {
+    width: 220px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .header-search-container {
+    width: 180px;
+  }
+}
+
+/* Small mobile */
+@media (max-width: 360px) {
+  .header-search-container {
+    width: 150px;
+  }
 }
 
 .header-search-container:focus-within {
@@ -58,6 +99,12 @@
   gap: 20px;
 }
 
+@media (max-width: 768px) {
+  .header-nav {
+    gap: 12px;
+  }
+}
+
 .header-nav-link {
   font-size: 18px;
   color: #333;
@@ -65,6 +112,19 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .header-nav-link {
+    font-size: 16px;
+    flex-direction: row;
+    justify-content: flex-start;
+    width: 100%;
+    padding: 0;
+  }
 }
 
 .header-suggestions-dropdown {
@@ -120,6 +180,68 @@
 
 .search-dropdown-item:hover {
   background: #f8f9fa;
+}
+
+/* Mobile menu button - hidden on desktop */
+.mobile-menu-button {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+}
+
+/* Mobile menu */
+.mobile-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  background: white;
+  border-bottom: 1px solid #ddd;
+  z-index: 50;
+}
+
+
+
+.mobile-nav {
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  color: #333;
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  text-align: left;
+  width: 100%;
+}
+
+.mobile-nav-link:hover {
+  background: #f8f9fa;
+}
+
+/* Desktop styles */
+.header-nav-desktop {
+  display: flex;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  .header-nav-desktop {
+    display: none;
+  }
+  
+  .mobile-menu-button {
+    display: block;
+  }
 }
 
 
