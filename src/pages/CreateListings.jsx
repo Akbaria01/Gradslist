@@ -421,7 +421,6 @@ export default function CreateListings() {
                 type="submit"
                 disabled={isSubmitting}
                 className={`mt-6 text-white font-semibold py-3 px-16 rounded-lg transition duration-200 hover:opacity-90 ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
-                className="mt-6 text-white font-semibold py-3 px-16 rounded-lg transition duration-200 hover:opacity-60"
                 style={{ backgroundColor: '#395A7F' }}
               >
                 {isSubmitting ? 'Saving...' : (editMode ? 'Update Listing' : 'Submit')}
