@@ -100,7 +100,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "viewprofile/:userId",
+        path: "viewprofile/:uid",
         element: (
           <ProtectedRoute>
             <ViewProfile />
