@@ -482,7 +482,7 @@ export default function Home() {
                 onClick={() => setCurrentPage(page)}
                 className={`px-3 py-2 text-sm font-medium rounded-lg ${
                   currentPage === page
-                    ? "text-white bg-sky-500 border border-sky-500"
+                    ? "text-white bg-[#395A7F] border border-[#395A7F]"
                     : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
                 }`}
               >
