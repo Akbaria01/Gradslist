@@ -302,9 +302,8 @@ function Message() {
     <div className="flex h-screen bg-gray-100">
       {/* SIDEBAR */}
       <div
-        className={`${
-          isSidebarOpen ? "w-56" : "w-0"
-        } bg-white border-r flex flex-col transition-all duration-300`}
+        className={`bg-white border-r flex flex-col transition-all duration-300 overflow-hidden ${isSidebarOpen ? "w-56" : "w-0"
+          }`}
       >
         <div className="bg-[#395A7F] text-white p-4">
           <h1 className="text-lg font-semibold">Inbox</h1>

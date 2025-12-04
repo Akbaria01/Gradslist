@@ -106,7 +106,7 @@ export default function Home() {
   }, [location.state]);
 
   const [products, setProducts] = useState([]); // from Firestore
-  const itemsPerPage = 8;
+  const itemsPerPage = 12;
 
   // SearchContext from your header
   const { searchQuery } = useSearch();
@@ -545,7 +545,7 @@ export default function Home() {
             {/* Top block: title + price + location */}
             <div>
               <h3
-               className="text-lg font-semibold text-gray-900 h-[48px]"
+               className="text-sm font-semibold text-gray-900 h-[48px]"
               style={{
                 display: '-webkit-box',
                 WebkitLineClamp: 2,
