@@ -345,14 +345,6 @@ export default function ListingDetail() {
                   <span className="text-base text-gray-600">Condition: </span>
                   <span className="text-base text-gray-600">{listing.condition || 'Unknown'}</span>
                 </div>
-          <div className="mt-6">
-            <button
-              onClick={handleContactSeller}
-              className="w-full bg-[#395A7F] text-white py-3 rounded-md font-semibold"
-            >
-              Contact Seller
-            </button>
-          </div>
                     <div className="mb-3">
                       <span className="text-base text-gray-600">Condition: </span>
                       <span className="text-base text-gray-600">{listing.condition || 'Unknown'}</span>
@@ -383,7 +375,10 @@ export default function ListingDetail() {
             </div>
 
             <div className="mt-6">
-              <button className="w-full bg-[#395A7F] text-white py-3 rounded-md font-semibold">
+              <button
+                onClick={handleContactSeller}
+                className="w-full bg-[#395A7F] text-white py-3 rounded-md font-semibold"
+              >
                 Contact Seller
               </button>
             </div>
