@@ -13,8 +13,7 @@ export default function ListingDetail() {
   const [listing, setListing] = useState(location.state?.listing || null);
   const [loading, setLoading] = useState(!listing);
   const [error, setError] = useState(null);
-  const { currentUser } = useAuth();
-  const navigate = useNavigate();
+
 
 
   // Always fetch the canonical listing from Firestore so fields like createdAt are resolved
