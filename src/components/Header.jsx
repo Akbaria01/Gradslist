@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Home, User, MapPin, MessageSquare, Pencil } from "lucide-react";
+import { Home, User, MapPin, MessageSquare, Pencil, Search } from "lucide-react";
 import { useSearch } from "../context/SearchContext";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth, db } from "../firebase";
@@ -121,9 +121,7 @@ export default function Header() {
           }}
         />
 
-        <button className="header-search-button" onClick={() => navigate("/")}>
-          Search
-        </button>
+        <Search size={20} className="header-search-icon" onClick={() => navigate("/")} />
 
         {/* DROPDOWN */}
         {showDropdown && suggestions.length > 0 && (
