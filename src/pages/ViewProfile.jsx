@@ -159,17 +159,39 @@ export default function ViewProfile() {
     setImagePreview(profileData.profilePic || "");
   };
 
-  const handleImageChange = (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    setNewProfileImageFile(file);
+  const handleImageChange = async (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file || !currentUser) return;
 
-    if (imagePreview && imagePreview.startsWith("blob:")) {
-      URL.revokeObjectURL(imagePreview);
-    }
-    const url = URL.createObjectURL(file);
-    setImagePreview(url);
-  };
+  // local preview
+  if (imagePreview && imagePreview.startsWith("blob:")) {
+    URL.revokeObjectURL(imagePreview);
+  }
+  const localURL = URL.createObjectURL(file);
+  setImagePreview(localURL);
+
+  try {
+    // upload instantly
+    const storage = getStorage(app);
+    const destPath = `profilePics/${currentUser.uid}/${Date.now()}_${file.name}`;
+    const fileRef = storageRef(storage, destPath);
+
+    await uploadBytes(fileRef, file);
+    const downloadURL = await getDownloadURL(fileRef);
+
+    // save directly to Firestore
+    const userRef = doc(db, "users", currentUser.uid);
+    await setDoc(userRef, { profilePic: downloadURL }, { merge: true });
+
+    // update UI
+    setProfileData(prev => ({ ...prev, profilePic: downloadURL }));
+
+    setSuccess("Profile photo updated!");
+  } catch (err) {
+    console.error(err);
+    setError("Failed to upload profile photo.");
+  }
+};
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
@@ -211,7 +233,7 @@ export default function ViewProfile() {
           username: trimmedName,
           email: trimmedEmail,
           phone: profileData.phone.trim() || "",
-          profilePic: profilePicURL || "",
+          profilePic: profilePicURL,
         },
         { merge: true }
       );
@@ -221,8 +243,9 @@ export default function ViewProfile() {
         name: trimmedName,
         email: trimmedEmail,
         phone: profileData.phone.trim() || "",
-        profilePic: profilePicURL || "",
+        profilePic: profilePicURL,
       }));
+      setImagePreview(profilePicURL);
 
       setSuccess("Profile updated successfully.");
       setEditing(false);
@@ -273,6 +296,7 @@ export default function ViewProfile() {
 
               {/* Hidden input that triggers on click */}
               <input
+                id="profilePicInput"
                 type="file"
                 accept="image/png,image/jpeg"
                 className="hidden"
@@ -296,6 +320,18 @@ export default function ViewProfile() {
             )}
 
           </div>
+          {isOwnProfile && (
+            <button
+              type="button"
+              onClick={() => document.getElementById("profilePicInput").click()}
+              className={`px-4 py-2 text-sm rounded-lg font-medium shadow-sm ${buttonStyle}`}
+            
+            >
+              Edit Photo
+            </button>
+          )}
+          <br/>
+
           {isOwnProfile && (
             <button
               onClick={handleLogOut}
