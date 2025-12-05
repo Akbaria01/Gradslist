@@ -370,7 +370,7 @@ export default function Profile() {
   
 
   return (
-    <div className="bg-[#eaecef] min-h-screen p-6">
+    <div className="bg-[#eaecef] p-4 pt-6 pb-9">
       {/* Top Row: Dashboard Title + Profile + Rating */}
       <div className="flex flex-nowrap justify-center items-center gap-40 mb-10">
         <div className="flex flex-col items-center">
