@@ -324,6 +324,7 @@ useEffect(() => {
             <h1 className="text-3xl font-bold text-gray-900 text-center flex-1 mx-4">{title}</h1>
 
             {/* Heart icon for saving */}
+            {currentUser?.uid !== listing.sellerId && (
             <button
               onClick={toggleSave}
               disabled={saving}
@@ -344,6 +345,7 @@ useEffect(() => {
                 />
               </svg>
             </button>
+            )}
           </div>
         </div>
       </div>
@@ -419,14 +421,17 @@ useEffect(() => {
               </button>
               )}
             </div>
-
+            
+            
             <div className="mt-6">
+              {currentUser?.uid !== listing.sellerId && (
               <button
                 onClick={handleContactSeller}
                 className="w-full bg-[#395A7F] text-white py-3 rounded-md font-semibold"
               >
                 Contact Seller
               </button>
+              )}
             </div>
 
             <div className="mt-6 bg-white p-6 rounded shadow-sm">
