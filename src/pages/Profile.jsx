@@ -368,6 +368,8 @@ export default function Profile() {
       } 
     });
   };
+
+
   const handleProfileImageChange = async (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file || !currentUser) return;
@@ -381,6 +383,7 @@ export default function Profile() {
   
     setPfpUploading(true);
     try {
+
       const storage = getStorage(app);
       const destPath = `profilePics/${currentUser.uid}/${Date.now()}_${file.name}`;
       const fileRef = storageRef(storage, destPath);
