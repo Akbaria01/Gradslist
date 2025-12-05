@@ -1,3 +1,4 @@
+// src/pages/Profile.jsx
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -25,6 +26,7 @@ export default function Profile() {
   const [loadingReviews, setLoadingReviews] = useState(true);
   const [deleteMessage, setDeleteMessage] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  
   useEffect(() => {
     return () => {
       if (imagePreview && imagePreview.startsWith("blob:")) {
@@ -32,6 +34,7 @@ export default function Profile() {
       }
     };
   }, [imagePreview]);
+  
   // Load user data from Firestore "users" collection
   useEffect(() => {
     const loadUserProfile = async () => {
@@ -93,6 +96,7 @@ export default function Profile() {
           posted: data.postedText || "Recently",
           location: data.location || "",
           seller: data.seller || currentUser.displayName || "Seller",
+          sellerId: data.sellerId || currentUser.uid, // Include sellerId
           _raw: data
         });
       });
@@ -142,6 +146,7 @@ export default function Profile() {
           brand: data.listingData?.brand || "",
           location: data.listingData?.location || "Unknown",
           seller: data.listingData?.seller || "Unknown",
+          sellerId: data.listingData?.sellerId, // Try to get sellerId
           posted: data.listingData?.postedText || "Recently",
           _raw: data.listingData
         });
@@ -162,11 +167,13 @@ export default function Profile() {
     }
   };
 
-  // Fetch items that need reviews (using saved items as placeholder)
+  // Fetch items that need reviews - IMPROVED VERSION
   const fetchReviewsToLeave = async () => {
     if (!currentUser) return;
 
     try {
+      // For now, we'll use saved items as placeholder
+      // In a real app, you would fetch completed purchases/transactions
       const q = query(
         collection(db, "savedItems"),
         where("userId", "==", currentUser.uid)
@@ -175,8 +182,28 @@ export default function Profile() {
       const querySnapshot = await getDocs(q);
       const items = [];
 
-      querySnapshot.forEach((docSnap) => {
+      for (const docSnap of querySnapshot.docs) {
         const data = docSnap.data();
+        
+        // Try to get the full listing to get sellerId
+        let sellerId = data.listingData?.sellerId;
+        let sellerName = data.listingData?.seller || "Unknown";
+        
+        // If sellerId is not in saved item data, fetch the full listing
+        if (!sellerId && data.listingId) {
+          try {
+            const listingRef = doc(db, "listings", data.listingId);
+            const listingSnap = await getDoc(listingRef);
+            if (listingSnap.exists()) {
+              const listingData = listingSnap.data();
+              sellerId = listingData.sellerId || listingData.userId || listingData.createdBy;
+              sellerName = listingData.seller || sellerName;
+            }
+          } catch (err) {
+            console.error("Error fetching listing for review:", err);
+          }
+        }
+
         items.push({
           savedId: docSnap.id,
           listingId: data.listingId,
@@ -191,11 +218,12 @@ export default function Profile() {
           image: data.listingData?.image || data.listingData?.imageUrl || data.listingData?.photoUrl || "",
           brand: data.listingData?.brand || "",
           location: data.listingData?.location || "Unknown",
-          seller: data.listingData?.seller || "Unknown",
+          seller: sellerName,
+          sellerId: sellerId, // Now includes sellerId
           posted: data.listingData?.postedText || "Recently",
           _raw: data.listingData
         });
-      });
+      }
 
       // Sort by most recent and take only 3
       items.sort((a, b) => {
@@ -347,18 +375,19 @@ export default function Profile() {
     }
   };
 
-  // Handle leaving a review - navigates to Review.jsx with listing data
+  // Handle leaving a review - FIXED VERSION
   const handleLeaveReview = (item) => {
     navigate("/review", { 
       state: { 
         listing: {
-          id: item.listingId,
+          id: item.listingId, // Changed from ListingId to id
           title: item.name,
           price: item.price,
           condition: item.condition,
           image: item.image,
           category: item.brand,
           seller: item.seller,
+          sellerId: item.sellerId, // Critical: This must be included
           location: item.location,
           description: "Item purchased and ready for review",
           postedAt: item.posted,
@@ -367,7 +396,6 @@ export default function Profile() {
       } 
     });
   };
-  
 
   return (
     <div className="bg-[#eaecef] p-4 pt-6 pb-9">
@@ -388,48 +416,45 @@ export default function Profile() {
         </div>
 
         {/* Profile Box */}
-        {/* Profile Box */}
-<div
-  className="flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-200"
-  style={{ width: "260px", height: "100px" }}
->
-  <div className="relative">
-    <label className="block cursor-pointer">
-      {user.profilePic ? (
-        <img
-          src={user.profilePic}
-          className="w-20 h-20 rounded-full object-cover"
-          alt="Profile"
-        />
-      ) : (
-        <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center text-[10px] text-gray-500">
-          No Photo
+        <div
+          className="flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-200"
+          style={{ width: "260px", height: "100px" }}
+        >
+          <div className="relative">
+            <label className="block cursor-pointer">
+              {user.profilePic ? (
+                <img
+                  src={user.profilePic}
+                  className="w-20 h-20 rounded-full object-cover"
+                  alt="Profile"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center text-[10px] text-gray-500">
+                  No Photo
+                </div>
+              )}
+            </label>
+
+            {pfpUploading && (
+              <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] text-gray-500">
+                Updating…
+              </span>
+            )}
+          </div>
+
+          <div className="flex flex-col justify-center h-full">
+            <p className="text-lg font-semibold text-gray-900">{user.name}</p>
+            {user.email && (
+              <p className="text-xs text-gray-500 truncate">{user.email}</p>
+            )}
+            <button
+              onClick={() => navigate(`/viewprofile/${currentUser?.uid}`)}
+              className="text-sm text-sky-600 hover:underline mt-1"
+            >
+              View Profile
+            </button>
+          </div>
         </div>
-      )}
-
-    </label>
-
-    {pfpUploading && (
-      <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] text-gray-500">
-        Updating…
-      </span>
-    )}
-  </div>
-
-  <div className="flex flex-col justify-center h-full">
-    <p className="text-lg font-semibold text-gray-900">{user.name}</p>
-    {user.email && (
-      <p className="text-xs text-gray-500 truncate">{user.email}</p>
-    )}
-    <button
-      onClick={() => navigate(`/viewprofile/${currentUser?.uid}`)}
-      className="text-sm text-sky-600 hover:underline mt-1"
-    >
-      View Profile
-    </button>
-  </div>
-</div>
-
 
         {/* Rating Box */}
         <div

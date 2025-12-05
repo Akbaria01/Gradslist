@@ -1,3 +1,4 @@
+// src/pages/Review.jsx
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -21,7 +22,7 @@ export default function Review() {
   const [listing, setListing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [distance, setDistance] = useState(null); // Add distance to state
+  const [distance, setDistance] = useState(null);
 
   const buttonStyle = "bg-[#2E4C6E] hover:bg-[#243c58] text-white";
 
@@ -64,7 +65,7 @@ export default function Review() {
                 return "Unknown";
               })(),
               seller: data.seller || "Unknown",
-              sellerId: data.sellerId,
+              sellerId: data.sellerId || data.createdBy || data.userId, // Get sellerId from listing
               postedAt: data.createdAt?.toDate?.()?.toLocaleDateString('en-US', { 
                 month: 'short', 
                 day: 'numeric' 
@@ -94,33 +95,56 @@ export default function Review() {
     setRating(starValue);
   };
 
-  // Handle review submission - MODIFIED: Doesn't save to Firebase
+  // Handle review submission - USING SELLER INFO FROM LISTING CARD
   const handleSubmitReview = async () => {
     if (!rating) {
       alert("Please select a star rating!");
       return;
     }
-
+  
     if (!listing || !listing.id) {
       alert("Listing information is missing!");
       return;
     }
-
+  
+    // Get seller info directly from the listing card data
+    const sellerId = listing.sellerId;
+    const sellerName = listing.seller || "Unknown Seller";
+  
+    if (!sellerId) {
+      console.error("Seller ID is missing from listing data:", listing);
+      alert("Seller information is missing from the listing! Cannot post review.");
+      return;
+    }
+  
     setIsSubmitting(true);
-
+  
     try {
-      // Create review data but DON'T save to Firebase
+      // Create review data using seller info from listing card
       const reviewData = {
-        userId: currentUser?.uid,
-        userName: currentUser?.displayName || "Anonymous",
+        reviewerId: currentUser?.uid,
+        reviewerName: currentUser?.displayName || "Anonymous",
+        reviewerEmail: currentUser?.email || "",
+        reviewedUserId: sellerId,  // The seller being reviewed FROM LISTING CARD
+        reviewedUserName: sellerName,  // Seller name FROM LISTING CARD
         listingId: listing.id,
         listingTitle: listing.title,
-        sellerId: listing.sellerId,
         rating: rating,
-        reviewText: reviewText.trim(),
-        createdAt: new Date(),
-        updatedAt: new Date()
+        comment: reviewText.trim(),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
       };
+
+      console.log("Saving review for seller:", {
+        sellerId: sellerId,
+        sellerName: sellerName,
+        listingId: listing.id,
+        listingTitle: listing.title
+      });
+  
+      // Add to Firestore
+      const reviewRef = await addDoc(collection(db, "reviews"), reviewData);
+      console.log("Review saved with ID:", reviewRef.id);
       
       // Set the posted review for display in modal
       setPostedReview({
@@ -138,17 +162,8 @@ export default function Review() {
       setReviewText("");
       
     } catch (error) {
-      console.error("Error in review submission:", error);
-      // Still show success for demo purposes
-      setPostedReview({
-        name: currentUser?.displayName || "You",
-        rating: rating,
-        text: reviewText.trim(),
-        time: "Just now"
-      });
-      setShowSuccessModal(true);
-      setRating(0);
-      setReviewText("");
+      console.error("Error submitting review:", error);
+      alert("Failed to submit review. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -203,7 +218,7 @@ export default function Review() {
     return stars;
   }
 
-  // Custom modal content for review success - SIMPLIFIED
+  // Custom modal content for review success - USING SELLER INFO FROM LISTING CARD
   const ReviewSuccessModal = () => (
     <div className="bg-white px-8 py-8 rounded-lg shadow-lg border border-gray-200 relative max-w-md w-full mx-4">
       <button 
@@ -216,30 +231,47 @@ export default function Review() {
         ✕
       </button>
       
-      <div className="text-center mb-6">
+      <div className="text-center mb-8">
         <h2 className="text-2xl font-semibold text-gray-800 mb-2">Review Successfully Posted!</h2>
       </div>
       
-      {postedReview && (
+      {postedReview && listing && (
         <div className="border border-gray-300 rounded-lg p-6">
-          {/* User Info Section - Left Aligned */}
-          <div className="flex items-center gap-4 mb-4">
+          {/* User Info Section */}
+          <div className="flex items-center gap-4 mb-6">
             {/* User Name */}
             <div>
               <p className="font-medium text-gray-900 text-lg">{postedReview.name}</p>
             </div>
           </div>
-          {/* Star Rating - Left Aligned */}
-          <div className="mb-4">
+          
+          {/* Star Rating */}
+          <div className="mb-6">
             <div className="flex items-center gap-2">
               {renderStars(false, "text-xl")}
             </div>
           </div>
+          
           {/* Review Text */}
-          <div>
-            <h3 className="font-medium text-gray-700 mb-2"></h3>
+          <div className="mb-8">
+            <h3 className="font-medium text-gray-700 mb-3"></h3>
             <p className="text-gray-700">{postedReview.text}</p>
           </div>
+          
+          {/* View Seller Profile Button */}
+          {listing.sellerId && (
+            <div className="flex justify-center">
+              <button
+                onClick={() => {
+                  setShowSuccessModal(false);
+                  navigate(`/viewprofile/${listing.sellerId}`);
+                }}
+                className="w-fit bg-[#395A7F] text-white px-5 py-2 rounded-md font-semibold hover:bg-[#2E4C6E] transition-colors"
+              >
+                View {listing.seller}'s Profile
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -290,7 +322,7 @@ export default function Review() {
         <div className="lg:col-span-2">
           {listing && (
             <div className="group relative flex flex-col h-full rounded-xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-md">
-              {/* Seller Info */}
+              {/* Seller Info - Using seller info from listing card */}
               <div className="flex items-center justify-between mb-4 p-4">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
@@ -299,7 +331,19 @@ export default function Review() {
                     </span>
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-gray-900">{listing.seller}</div>
+                    {/* Seller name button - only clickable if sellerId exists */}
+                    {listing.sellerId ? (
+                      <button
+                        onClick={() => navigate(`/profile/${listing.sellerId}`)}
+                        className="text-sm font-medium text-gray-900 hover:text-blue-600"
+                      >
+                        {listing.seller}
+                      </button>
+                    ) : (
+                      <span className="text-sm font-medium text-gray-900">
+                        {listing.seller}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center">
@@ -373,6 +417,12 @@ export default function Review() {
               <h2 className="text-xl font-bold text-gray-900">
                 Leave a Review on Your Experience!
               </h2>
+              {/* Show info about who you're reviewing */}
+              {listing.seller && listing.sellerId && (
+                <p className="text-gray-600 text-sm mt-2">
+                  You're reviewing <span className="font-semibold">{listing.seller}</span>
+                </p>
+              )}
             </div>
 
             {/* Rating Selection - Stars next to "Rating:" - FIXED */}
