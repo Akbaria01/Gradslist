@@ -134,7 +134,6 @@ export default function Home() {
     }
   }, [location.state]);
 
-  const [products, setProducts] = useState([]);
     // Ask browser for current location (once on mount)
     useEffect(() => {
       if (!navigator.geolocation) {
@@ -497,7 +496,6 @@ export default function Home() {
 
       return true;
     });
-  }, [products, filters]);
   }, [products, filters, userLocation]);
   
   
@@ -721,7 +719,7 @@ export default function Home() {
         {/* Listing cards */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 px-4 lg:px-6">
           {currentProducts.map((product) => {
-            const meta = randomMeta[product.id] || { distance: "2.3" };
+            const meta = randomMeta[product.id] || { distance: "2.3" }; 
             const sellerName = product.seller || product._raw?.seller || "Seller";
             const sellerPic = product.sellerProfilePic || product._raw?.sellerProfilePic || null;
             const sellerId = product.sellerId || product._raw?.sellerId;
@@ -729,7 +727,7 @@ export default function Home() {
             // Get seller rating from fetched ratings
             const sellerRating = sellerId ? sellerRatings[sellerId] || 0 : 0;
             const ratingValue = sellerRating > 0 ? sellerRating : 0;
-            const meta = randomMeta[product.id] || { rating: "4.6" };
+
 
             let distanceMiles = null;
             const coords = product._raw?.locationCoords;
@@ -756,17 +754,6 @@ export default function Home() {
                 distanceMiles = stored;
               }
             }
-
-            const sellerName =
-              product.seller ||
-              product._raw?.seller ||
-              product._raw?.sellerName ||
-              "Seller";
-
-            const sellerPic =
-              product.sellerProfilePic ||
-              product._raw?.sellerProfilePic ||
-              null;
 
             const city =
               (product.location || product._raw?.location || "")
@@ -808,88 +795,76 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Image left, info right on larger screens */}
-                <div className="flex flex-col md:flex-row gap-4 h-full items-stretch">
-                  {/* Image */}
-                  <div className="md:w-1/2 w-full overflow-hidden rounded-lg bg-gray-100 h-[220px] md:h-full">
-                    <img
-                      src={product.image}
-                      alt={product.alt}
-                      className="h-full w-full object-cover transition group-hover:scale-105"
-                    />
+               {/* Image left, info right on larger screens */}
+              <div className="flex flex-col md:flex-row gap-4 h-full items-stretch">
+                {/* Image: force full height so row children match */}
+                <div className="md:w-1/2 w-full overflow-hidden rounded-lg bg-gray-100 h-[220px] md:h-full">
+                  <img
+                    src={product.image}
+                    alt={product.alt}
+                    className="h-full w-full object-cover transition group-hover:scale-105"
+                />
+                </div>
+
+                {/* Info column: full height + evenly spaced vertically */}
+                <div className="flex-1 flex flex-col md:py-1 h-full">
+                  {/* Top block: title + price + location */}
+                  <div>
+                    <h3
+                      className="text-sm font-semibold text-gray-900 h-[48px]"
+                    style={{
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    {product.name || product.title || 'Untitled'}
+                    </h3>
+
+                    <p className="mt-2 text-sm font-bold text-gray-900">{product.price}</p>
+                    <p className="mt-1 text-xs text-gray-500">Location: {city}</p>
                   </div>
 
-                  {/* Info column */}
-                  <div className="flex-1 flex flex-col justify-between md:py-1 h-full">
-                    {/* Top block: title + price + location */}
-                    <div>
-                      <h3
-                        className="text-sm font-semibold text-gray-900 h-[48px]"
-                        style={{
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden'
-                        }}
-                      >
-                        {product.name || product.title || 'Untitled'}
-                      </h3>
-
-                      <p className="mt-2 text-sm font-bold text-gray-900">{product.price}</p>
-                      <p className="mt-1 text-xs text-gray-500">Location: {city}</p>
-                    </div>
-
-                    {/* Bottom block */}
-                    <div className="pt-2">
-                      <div className="text-xs text-gray-500">Posted {formatPosted(product)}</div>
-                      <div className="mt-1 text-xs text-gray-500">Distance: {meta.distance} mi</div>
-                      <div className="mt-3">
-                        <button
-                          onClick={() => {
-                            const payload = product._raw
-                              ? { id: product.id, ...product._raw }
-                              : { id: product.id, ...product };
-                            navigate(`/listing/${product.id}`, { state: { listing: payload } });
-                          }}
-                          className="w-full inline-flex items-center justify-center rounded-lg bg-[#395A7F] px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-[#A3CAE9]"
-                        >
-                          View details
-                        </button>
-                      </div>
-                    </div>
+                  {/* Bottom block: uniform placement */}
+                  <div className="pt-2">
+                    <div className="text-xs text-gray-500">Posted {formatPosted(product)}</div>
+                    {/* <div className="mt-1 text-xs text-gray-500">Distance: {meta.distance} mi</div>  */}
+                  <div className="mt-1 text-xs text-gray-500">
+                    Distance:{" "}
+                    {distanceMiles !== null && distanceMiles !== ""
+                      ? `${distanceMiles} mi`
+                      : "N/A"}
+                  </div>
+                    
+                    <div className="mt-auto pt-3">
+                      <button
+                        onClick={() => {
+                          const payload = product._raw
+                            ? { id: product.id, ...product._raw }
+                            : { id: product.id, ...product };
+                        navigate(`/listing/${product.id}`, { state: { listing: payload } });
+                      }}
+                      className="w-full inline-flex items-center justify-center rounded-lg bg-[#395A7F] px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-[#A3CAE9]"
+                    >
+    
+                      View details
+                    </button>
                   </div>
                 </div>
-            {/* Bottom block: uniform placement */}
-            <div className="pt-2">
-              <div className="text-xs text-gray-500">Posted {formatPosted(product)}</div>
-               {/* <div className="mt-1 text-xs text-gray-500">Distance: {meta.distance} mi</div>  */}
-            <div className="mt-1 text-xs text-gray-500">
-              Distance:{" "}
-              {distanceMiles !== null && distanceMiles !== ""
-                ? `${distanceMiles} mi`
-                : "N/A"}
-            </div>
-
-              <div className="mt-3">
-                <button
-                  onClick={() => {
-                    const payload = product._raw
-                      ? { id: product.id, ...product._raw }
-                      : { id: product.id, ...product };
-                    navigate(`/listing/${product.id}`, { state: { listing: payload } });
-                  }}
-                  className="w-full inline-flex items-center justify-center rounded-lg bg-[#395A7F] px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-[#A3CAE9]"
-                >
-                  View details
-                </button>
               </div>
-            );
-          })}
-        </div>   
+            </div>
+          </div>
+        );
+      })}
+    </div>    
 
         <div className="flex-1"></div>
+
+
       </div>
       
+
       {/* Pagination */}
       {true && (
         <div className="flex items-center justify-center px-4 lg:px-6 py-8">
@@ -939,25 +914,6 @@ export default function Home() {
               </button>
             </div>
 
-            <div className="mt-4 space-y-4">
-              {/* Distance */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Distance
-                </label>
-                <select
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
-                  value={filters.distance}
-                  onChange={(e) =>
-                    setFilters((prev) => ({ ...prev, distance: e.target.value }))
-                  }
-                >
-                  <option value="any">Any distance</option>
-                  <option value="1">Within 1 mile</option>
-                  <option value="3">Within 3 miles</option>
-                  <option value="5">Within 5 miles</option>
-                </select>
-              </div>
       <div className="mt-4 space-y-4">
         {/* Distance */}
         <div>
@@ -1077,7 +1033,10 @@ export default function Home() {
         </div>
       )}
     </div>
+
   );
+
 }
+
 
 
