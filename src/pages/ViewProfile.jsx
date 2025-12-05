@@ -257,6 +257,7 @@ export default function ViewProfile() {
         <div className="flex flex-col items-center">
           {/* Profile image / placeholder */}
           <div className="relative mb-4">
+            {isOwnProfile ? (
             <label className="block cursor-pointer">
               {imagePreview || profileData.profilePic ? (
                 <img
@@ -278,6 +279,22 @@ export default function ViewProfile() {
                 onChange={handleImageChange}
               />
             </label>
+            ) : (
+              <>
+                {profileData.profilePic ? (
+                <img
+                  src={profileData.profilePic}
+                  alt="Profile"
+                  className="w-56 h-56 rounded-full object-cover shadow-lg"
+                />
+              ) : (
+                <div className="w-56 h-56 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-2xl shadow-lg">
+                  No Photo
+                </div>
+              )}
+              </>
+            )}
+
           </div>
           {isOwnProfile && (
             <button
