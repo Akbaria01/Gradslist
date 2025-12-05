@@ -1,3 +1,4 @@
+// src/pages/ViewProfile.jsx
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
@@ -11,6 +12,7 @@ import {
   query,
   where,
   setDoc,
+  serverTimestamp
 } from "firebase/firestore";
 import { db, app } from "../firebase";
 import {
@@ -57,7 +59,7 @@ export default function ViewProfile() {
     };
   }, [imagePreview]);
 
-  // Load profile
+  // Load profile - FIXED DEPENDENCY
   useEffect(() => {
     if (!uid) return;
 
@@ -68,8 +70,8 @@ export default function ViewProfile() {
         if (snap.exists()) {
           const data = snap.data();
           setProfileData({
-            name: data.username || currentUser.displayName || "User",
-            email: data.email || currentUser.email || "",
+            name: data.username || data.name || "User",
+            email: data.email || "",
             phone: data.phone || "",
             profilePic: data.profilePic || "",
           });
@@ -77,13 +79,25 @@ export default function ViewProfile() {
             setImagePreview(data.profilePic);
           }
         } else {
+          // Create a default profile if doesn't exist
           const fallback = {
-            name: currentUser.displayName || "User",
-            email: currentUser.email || "",
+            name: "User",
+            email: "",
             phone: "",
             profilePic: "",
           };
           setProfileData(fallback);
+          
+          // Save default profile if it's the current user
+          if (uid === currentUser?.uid) {
+            await setDoc(userRef, {
+              username: currentUser.displayName || "User",
+              email: currentUser.email || "",
+              phone: "",
+              profilePic: "",
+              createdAt: serverTimestamp()
+            }, { merge: true });
+          }
         }
       } catch (err) {
         console.error("Failed to load profile:", err);
@@ -91,9 +105,9 @@ export default function ViewProfile() {
     };
 
     loadProfile();
-  }, [currentUser]);
+  }, [uid, currentUser]);
 
-  // Load reviews
+  // Load reviews - FIXED
   useEffect(() => {
     if (!uid) return;
 
@@ -101,10 +115,29 @@ export default function ViewProfile() {
       try {
         const q = query(
           collection(db, "reviews"),
-          where("reviewedUserId", "==",uid)
+          where("reviewedUserId", "==", uid)
         );
         const querySnapshot = await getDocs(q);
-        const revs = querySnapshot.docs.map((doc) => doc.data());
+        const revs = querySnapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            reviewerId: data.reviewerId,
+            reviewerName: data.reviewerName || "Anonymous",
+            reviewerEmail: data.reviewerEmail,
+            reviewedUserId: data.reviewedUserId,
+            reviewedUserName: data.reviewedUserName,
+            listingId: data.listingId,
+            listingTitle: data.listingTitle,
+            rating: data.rating,
+            comment: data.comment || data.reviewText || "",
+            createdAt: data.createdAt?.toDate?.() || new Date(),
+            updatedAt: data.updatedAt?.toDate?.() || new Date()
+          };
+        });
+        
+        // Sort by date, newest first
+        revs.sort((a, b) => b.createdAt - a.createdAt);
         setReviews(revs);
       } catch (err) {
         console.error("Failed to load reviews:", err);
@@ -112,7 +145,7 @@ export default function ViewProfile() {
     };
 
     loadReviews();
-  }, [currentUser]);
+  }, [uid]);
 
   const handleLogOut = async () => {
     try {
@@ -160,38 +193,38 @@ export default function ViewProfile() {
   };
 
   const handleImageChange = async (e) => {
-  const file = e.target.files && e.target.files[0];
-  if (!file || !currentUser) return;
+    const file = e.target.files && e.target.files[0];
+    if (!file || !currentUser) return;
 
-  // local preview
-  if (imagePreview && imagePreview.startsWith("blob:")) {
-    URL.revokeObjectURL(imagePreview);
-  }
-  const localURL = URL.createObjectURL(file);
-  setImagePreview(localURL);
+    // local preview
+    if (imagePreview && imagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(imagePreview);
+    }
+    const localURL = URL.createObjectURL(file);
+    setImagePreview(localURL);
 
-  try {
-    // upload instantly
-    const storage = getStorage(app);
-    const destPath = `profilePics/${currentUser.uid}/${Date.now()}_${file.name}`;
-    const fileRef = storageRef(storage, destPath);
+    try {
+      // upload instantly
+      const storage = getStorage(app);
+      const destPath = `profilePics/${currentUser.uid}/${Date.now()}_${file.name}`;
+      const fileRef = storageRef(storage, destPath);
 
-    await uploadBytes(fileRef, file);
-    const downloadURL = await getDownloadURL(fileRef);
+      await uploadBytes(fileRef, file);
+      const downloadURL = await getDownloadURL(fileRef);
 
-    // save directly to Firestore
-    const userRef = doc(db, "users", currentUser.uid);
-    await setDoc(userRef, { profilePic: downloadURL }, { merge: true });
+      // save directly to Firestore
+      const userRef = doc(db, "users", currentUser.uid);
+      await setDoc(userRef, { profilePic: downloadURL }, { merge: true });
 
-    // update UI
-    setProfileData(prev => ({ ...prev, profilePic: downloadURL }));
+      // update UI
+      setProfileData(prev => ({ ...prev, profilePic: downloadURL }));
 
-    setSuccess("Profile photo updated!");
-  } catch (err) {
-    console.error(err);
-    setError("Failed to upload profile photo.");
-  }
-};
+      setSuccess("Profile photo updated!");
+    } catch (err) {
+      console.error(err);
+      setError("Failed to upload profile photo.");
+    }
+  };
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
@@ -480,17 +513,41 @@ export default function ViewProfile() {
             </h2>
             <div className="space-y-4">
               {reviews.length ? (
-                reviews.map((rev, index) => (
+                reviews.map((rev) => (
                   <div
-                    key={index}
+                    key={rev.id}
                     className="border-b border-gray-200 pb-3 last:border-b-0"
                   >
-                    <p className="text-lg font-medium text-gray-800 mb-1">
-                      {rev.reviewerName}
-                    </p>
-                    <div className="flex items-center mt-1 gap-[2px]">
-                      {renderStars(rev.rating)}
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <p className="text-lg font-medium text-gray-800">
+                          {rev.reviewerName}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {rev.createdAt.toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-[2px]">
+                        {renderStars(rev.rating)}
+                      </div>
                     </div>
+                    
+                    {rev.listingTitle && (
+                      <div className="mb-2">
+                        <p className="text-sm text-gray-600">For listing:</p>
+                        <button
+                          onClick={() => navigate(`/listing/${rev.listingId}`)}
+                          className="w-fit bg-[#395A7F] text-white px-3 py-1 rounded-md text-sm font-medium hover:bg-[#2E4C6E] transition-colors"
+                        >
+                          {rev.listingTitle}
+                        </button>
+                      </div>
+                    )}
+                    
                     <p className="text-base text-gray-700 mt-1">
                       {rev.comment}
                     </p>
