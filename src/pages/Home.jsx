@@ -910,9 +910,9 @@ function formatPosted(product) {
             }
           >
             <option value="any">Any distance</option>
-            <option value="1">Within 1 mile</option>
-            <option value="3">Within 3 miles</option>
-            <option value="5">Within 5 miles</option>
+            <option value="5">Within 5 mile</option>
+            <option value="10">Within 10 miles</option>
+            <option value="15">Within 15 miles</option>
           </select>
         </div>
 
