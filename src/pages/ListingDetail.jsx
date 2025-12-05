@@ -324,6 +324,7 @@ useEffect(() => {
             <h1 className="text-3xl font-bold text-gray-900 text-center flex-1 mx-4">{title}</h1>
 
             {/* Heart icon for saving */}
+            {currentUser?.uid !== listing.sellerId && (
             <button
               onClick={toggleSave}
               disabled={saving}
@@ -344,6 +345,7 @@ useEffect(() => {
                 />
               </svg>
             </button>
+            )}
           </div>
         </div>
       </div>
@@ -352,11 +354,12 @@ useEffect(() => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left column: image + details */}
           <div>
-            <div className="w-full rounded-lg overflow-hidden bg-gray-100">
+            <div className="relative w-full max-w-[600px] h-[350px] sm:h-[420px] md:h-[480px] overflow-hidden rounded-lg">
               <img
                 src={listing.image}
                 alt={title}
-                className="w-full h-[480px] object-cover"
+                className="w-full h-full object-cover object-center"
+                style={{ objectFit: "fill" }}
               />
             </div>
 
@@ -419,14 +422,17 @@ useEffect(() => {
               </button>
               )}
             </div>
-
+            
+            
             <div className="mt-6">
+              {currentUser?.uid !== listing.sellerId && (
               <button
                 onClick={handleContactSeller}
                 className="w-full bg-[#395A7F] text-white py-3 rounded-md font-semibold"
               >
                 Contact Seller
               </button>
+              )}
             </div>
 
             <div className="mt-6 bg-white p-6 rounded shadow-sm">
