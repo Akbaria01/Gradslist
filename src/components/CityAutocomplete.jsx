@@ -14,6 +14,7 @@ export default function CityAutocomplete({ value = '', onChange = () => {} }) {
   const [predictions, setPredictions] = useState([]);
   const [open, setOpen] = useState(false);
   const acServiceRef = useRef(null);
+  const placesServiceRef = useRef(null);
   const timerRef = useRef(null);
 
   useEffect(() => {
@@ -24,6 +25,9 @@ export default function CityAutocomplete({ value = '', onChange = () => {} }) {
     // initialize service when google available
     if (typeof window !== 'undefined' && window.google && window.google.maps && window.google.maps.places) {
       acServiceRef.current = new window.google.maps.places.AutocompleteService();
+      placesServiceRef.current = new window.google.maps.places.PlacesService(
+        document.createElement("div")
+      );
     }
   }, []);
 
@@ -60,12 +64,46 @@ export default function CityAutocomplete({ value = '', onChange = () => {} }) {
   };
 
   const handleSelect = (pred) => {
-    const desc = pred.description || pred.structured_formatting?.main_text || '';
-    setInput(desc);
-    onChange(desc);
+    const description = pred.description || pred.structured_formatting?.main_text || "";
+    setInput(description);
     setPredictions([]);
     setOpen(false);
+
+    // If we have a PlacesService, get the real geometry
+    if (placesServiceRef.current && pred.place_id) {
+      placesServiceRef.current.getDetails(
+        { placeId: pred.place_id, fields: ["geometry"] },
+        (place, status) => {
+          if (status === window.google.maps.places.PlacesServiceStatus.OK && place?.geometry) {
+            const lat = place.geometry.location.lat();
+            const lng = place.geometry.location.lng();
+
+            // Return full object to parent
+            onChange({
+              city: description,
+              lat,
+              lng,
+            });
+          } else {
+            // fallback: just return city name
+            onChange({
+              city: description,
+              lat: null,
+              lng: null,
+            });
+          }
+        }
+      );
+    } else {
+      // fallback when Google not loaded
+      onChange({
+        city: description,
+        lat: null,
+        lng: null,
+      });
+    }
   };
+
 
   const handleBlur = () => {
     // small timeout to allow click

@@ -21,7 +21,7 @@ export default function CreateListings() {
   const [category, setCategory] = useState(editMode ? listingData?.category || "" : "");
   const [subcategory, setSubcategory] = useState(editMode ? listingData?.subcategory || "" : "");
   const [condition, setCondition] = useState(editMode ? listingData?.condition || "" : "");
-  const [locationValue, setLocationValue] = useState(editMode ? listingData?.location || "" : "");
+  //const [locationValue, setLocationValue] = useState(editMode ? listingData?.location || "" : "");
   const [description, setDescription] = useState(editMode ? listingData?.description || "" : "");
   const [errors, setErrors] = useState({});
   const [imageFile, setImageFile] = useState(null);
@@ -29,6 +29,26 @@ export default function CreateListings() {
   const [showModal, setShowModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [listingLocation, setListingLocation] = useState(() => {
+    if (editMode && listingData) {
+      const city =
+        typeof listingData.location === "string"
+          ? listingData.location
+          : listingData.location?.city || "";
+  
+      const lat = listingData.locationCoords?.lat ?? null;
+      const lng = listingData.locationCoords?.lng ?? null;
+  
+      return { city, lat, lng };
+    }
+  
+    return {
+      city: "",
+      lat: null,
+      lng: null,
+    };
+  });
+  
   
   React.useEffect(() => {
     return () => {
@@ -135,7 +155,7 @@ export default function CreateListings() {
     if (!price.trim()) e.price = "Price is required";
     if (!category.trim()) e.category = "Category is required";
     if (!condition.trim()) e.condition = "Condition is required";
-    if (!locationValue.trim()) e.location = "Location is required";
+    if (!listingLocation.city.trim()) e.location = "Location is required";
     if (!description.trim()) e.description = "Description is required";
     return e;
   }
@@ -222,7 +242,16 @@ export default function CreateListings() {
           subcategory,
           subcategoryLower: subcategory.toLowerCase(),
           condition,
-          location: locationValue,
+          location: listingLocation.city || "",
+
+          // ✅ optionally also store coords for future real distance logic
+          locationCoords:
+            listingLocation.lat !== null && listingLocation.lng !== null
+              ? {
+                  lat: listingLocation.lat,
+                  lng: listingLocation.lng,
+                }
+              : null,
           image: imageURL || null,
           sellerId: currentUser.uid,
           seller: sellerName || null,
@@ -349,27 +378,56 @@ export default function CreateListings() {
                 </select>
               </div>
             </div>
-
             {/* Location */}
-            <div className="flex justify-center">
-              <div className="w-64">
-                <label className="block text-sm font-medium text-gray-700 mb-2 text-center">Location (city only)</label>
-                {loadError ? (
-                  <div className="text-sm text-red-500">Failed to load Google Maps script. Check console for errors.</div>
-                ) : !isLoaded ? (
-                  <input
-                    type="text"
-                    value={locationValue}
-                    onChange={(e) => setLocationValue(e.target.value)}
-                    placeholder="Loading map..."
-                    disabled
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-black"
-                  />
-                ) : (
-                  <CityAutocomplete value={locationValue} onChange={(v) => setLocationValue(v)} />
-                )}
-              </div>
-            </div>
+<div className="flex justify-center">
+  <div className="w-64">
+    <label className="block text-sm font-medium text-gray-700 mb-2 text-center">
+      Location (city only)
+    </label>
+
+    {loadError ? (
+      <div className="text-sm text-red-500">
+        Failed to load Google Maps script. Check console for errors.
+      </div>
+    ) : !isLoaded ? (
+      // While Google script is still loading
+      <input
+        type="text"
+        value={listingLocation.city}
+        onChange={(e) =>
+          setListingLocation((prev) => ({
+            ...prev,
+            city: e.target.value,
+          }))
+        }
+        placeholder="Loading map..."
+        disabled
+        className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-black"
+      />
+    ) : (
+      // When Maps is ready → use autocomplete
+      <CityAutocomplete
+        value={listingLocation.city}
+        onChange={(val) => {
+          // val can be either a string or { city, lat, lng }
+          if (typeof val === "string") {
+            setListingLocation((prev) => ({
+              ...prev,
+              city: val,
+            }));
+          } else if (val && typeof val === "object") {
+            setListingLocation({
+              city: val.city || "",
+              lat: val.lat ?? null,
+              lng: val.lng ?? null,
+            });
+          }
+        }}
+      />
+    )}
+  </div>
+</div>
+
 
             {/* Description */}
             <div>
