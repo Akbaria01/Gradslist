@@ -15,6 +15,7 @@ export default function ListingDetail() {
   const [error, setError] = useState(null);
   const [isSaved, setIsSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [sellerProfilePic, setSellerProfilePic] = useState(null);
 
 
   // Check if item is already saved when component loads
@@ -58,6 +59,32 @@ export default function ListingDetail() {
       mounted = false;
     };
   }, [id]);
+
+    // Resolve seller profile picture
+useEffect(() => {
+  if (!listing || !listing.sellerId) return;
+
+  // If listing already has sellerProfilePic, use it
+  if (listing.sellerProfilePic) {
+    setSellerProfilePic(listing.sellerProfilePic);
+    return;
+  }
+
+  // Otherwise, try to read from users/{sellerId}
+  const loadSellerPic = async () => {
+    try {
+      const snap = await getDoc(doc(db, "users", listing.sellerId));
+      if (snap.exists()) {
+        const u = snap.data();
+        setSellerProfilePic(u.profilePic || null);
+      }
+    } catch (e) {
+      console.error("Failed to load seller profile pic:", e);
+    }
+  };
+
+  loadSellerPic();
+}, [listing]);
 
   // Map center state: default to Charlotte
   const [center, setCenter] = useState({ lat: 35.2271, lng: -80.8431 });
@@ -363,6 +390,24 @@ export default function ListingDetail() {
           <aside>
             {/* Seller card section */}
             <div className="bg-white p-6 rounded-xl shadow-sm flex flex-col items-center">
+  {sellerProfilePic ? (
+    <img
+      src={sellerProfilePic}
+      alt={sellerName}
+      className="w-24 h-24 rounded-full object-cover mb-4"
+    />
+  ) : (
+    <div className="w-24 h-24 rounded-full bg-gray-200 mb-4 flex items-center justify-center text-lg font-semibold text-gray-500">
+      {sellerName?.charAt(0).toUpperCase()}
+    </div>
+  )}
+
+  <div className="text-lg font-semibold text-gray-900">{sellerName}</div>
+  <div className="mt-2 flex">{renderStars(4)}</div>
+  <div className="mt-2 text-sm text-gray-500">(4.0)</div>
+  <div className="mt-2 text-sm text-gray-600">Items sold: {itemsSold}</div>
+</div>
+
               <div className="w-24 h-24 rounded-full bg-gray-200 mb-4" />
               <div className="text-lg font-semibold text-gray-900">{sellerName}</div>
               <div className="mt-2 flex">{renderStars(4)}</div>

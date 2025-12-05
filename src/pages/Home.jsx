@@ -108,6 +108,14 @@ export default function Home() {
   const [products, setProducts] = useState([]); // from Firestore
   const itemsPerPage = 12;
 
+  const [filters, setFilters] = useState({
+    distance: "any",
+    minPrice: "",
+    maxPrice: "",
+    condition: "any",
+    datePosted: "any",
+  });
+
   // SearchContext from your header
   const { searchQuery } = useSearch();
 
@@ -135,9 +143,17 @@ export default function Home() {
         alt: data.title ?? data.name ?? "listing image",
         // keep description in raw if needed, but don't show it on the card
         description: data.description ?? "",
+ 
+ 
+        seller: data.seller || data.sellerName || "Seller",
+        sellerProfilePic: data.sellerProfilePic || null,
+        location: data.location || "",
         // preserve original doc data if needed later
         _raw: data,
       };
+ 
+      
+
       results.push(mapped);
     });
     return results;
@@ -322,7 +338,51 @@ export default function Home() {
   // -------------------------
   // Pagination (client-side slice of backend results)
   // -------------------------
-  const filteredProducts = products; // products already come from backend
+  const filteredProducts = useMemo(() => {
+    return products.filter((p) => {
+      // ---- PRICE filter ----
+      const numericPrice = p.price
+        ? Number(String(p.price).replace(/[^0-9.]/g, "")) || 0
+        : 0;
+  
+      if (filters.minPrice && numericPrice < Number(filters.minPrice)) {
+        return false;
+      }
+      if (filters.maxPrice && numericPrice > Number(filters.maxPrice)) {
+        return false;
+      }
+  
+      // ---- CONDITION filter ----
+      const rawCondition =
+        (p._raw?.condition || p.condition || "").toString().toLowerCase();
+  
+      if (filters.condition !== "any" && rawCondition) {
+        if (rawCondition !== filters.condition) {
+          return false;
+        }
+      }
+      // ---- DATE POSTED filter ----
+      if (filters.datePosted !== "any") {
+        const raw = p._raw || {};
+        const ts = raw.createdAt || raw.postedAt || p.createdAt;
+  
+        if (ts) {
+          const d = ts.toDate ? ts.toDate() : new Date(ts);
+          const diffMs = Date.now() - d.getTime();
+          const diffDays = diffMs / (1000 * 60 * 60 * 24);
+  
+          if (filters.datePosted === "24h" && diffDays > 1) return false;
+          if (filters.datePosted === "3d" && diffDays > 3) return false;
+          if (filters.datePosted === "7d" && diffDays > 7) return false;
+          if (filters.datePosted === "30d" && diffDays > 30) return false;
+        }
+      }
+  
+      return true;
+    });
+  }, [products, filters]);
+  
+
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
   const currentProducts = filteredProducts.slice(
@@ -345,7 +405,6 @@ export default function Home() {
     return stars;
   }
 
-  // Precompute a stable random rating (3-5) and distance (1.0-6.0) per product id while products list changes
   const randomMeta = useMemo(() => {
     const map = {};
     filteredProducts.forEach((p) => {
@@ -357,6 +416,49 @@ export default function Home() {
     return map;
   }, [filteredProducts]);
   
+
+  
+
+
+function formatPosted(product) {
+  const raw = product._raw || {};
+  const ts = raw.createdAt || raw.postedAt || product.createdAt;
+
+  if (!ts) {
+    return product.posted || ""; // fallback if nothing else
+  }
+
+  const date = ts.toDate ? ts.toDate() : new Date(ts);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMinutes = diffMs / (1000 * 60);
+  const diffHours = diffMinutes / 60;
+  const diffDays = diffHours / 24;
+
+  if (diffMinutes < 60) {
+    const m = Math.max(1, Math.round(diffMinutes));
+    return `${m} min${m === 1 ? "" : "s"} ago`;
+  }
+  if (diffHours < 24) {
+    const h = Math.round(diffHours);
+    return `${h} hour${h === 1 ? "" : "s"} ago`;
+  }
+  if (diffDays < 7) {
+    const d = Math.round(diffDays);
+    return `${d} day${d === 1 ? "" : "s"} ago`;
+  }
+  if (diffDays < 30) {
+    const w = Math.round(diffDays / 7);
+    return `${w} week${w === 1 ? "" : "s"} ago`;
+  }
+  const months = Math.round(diffDays / 30);
+  if (months < 12) {
+    return `${months} month${months === 1 ? "" : "s"} ago`;
+  }
+  const years = Math.round(diffDays / 365);
+  return `${years} year${years === 1 ? "" : "s"} ago`;
+}
+
 
   // Keep all JSX identical to original — only data source changed
   return (
@@ -504,30 +606,53 @@ export default function Home() {
         )}
         
               {/* Listing cards */}
-<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 px-4 lg:px-6">
-  {currentProducts.map((product) => {
-    const meta = randomMeta[product.id] || { rating: 4, distance: '2.3' };
-    const sellerName = product._raw?.seller || product._raw?.sellerName || 'Seller';
-    const city = (product._raw?.location || '')
-      .toString()
-      .replace(/\n+/g, ' ')
-      .split(',')[0]
-      .replace(/\s+/g, ' ')
-      .trim() || 'Unknown';
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 px-4 lg:px-6">
+          {currentProducts.map((product) => {
+            const meta = randomMeta[product.id] || { rating: "4.6", distance: "2.3" };
 
-    return (
-      <div
-        key={product.id}
-        className="group relative flex flex-col h-full rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
-      >
-        {/* Username + stars above image */}
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-gray-200" />
-            <div className="text-sm font-medium text-gray-900">{sellerName}</div>
-          </div>
-          <div className="text-sm">{renderStars(meta.rating)}</div>
+            const sellerName =
+              product.seller ||
+              product._raw?.seller ||
+              product._raw?.sellerName ||
+              "Seller";
+
+            const sellerPic =
+              product.sellerProfilePic ||
+              product._raw?.sellerProfilePic ||
+              null;
+
+            const city =
+              (product.location || product._raw?.location || "")
+                .toString()
+                .replace(/\n+/g, " ")
+                .split(",")[0]
+                .replace(/\s+/g, " ")
+                .trim() || "Unknown";
+
+  return (
+    <div
+      key={product.id}
+      className="group relative flex flex-col h-full rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+    >
+      {/* Username + stars above image */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-3">
+          {sellerPic ? (
+            <img
+              src={sellerPic}
+              alt={sellerName}
+              className="w-8 h-8 rounded-full object-cover border border-gray-300"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs text-gray-500">
+              {sellerName?.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <div className="text-sm font-medium text-gray-900">{sellerName}</div>
         </div>
+
+        <div className="text-sm">{renderStars(meta.rating)}</div>
+      </div>
 
         {/* Image left, info right on larger screens */}
         <div className="flex flex-col md:flex-row gap-4 h-full items-stretch">
@@ -562,9 +687,8 @@ export default function Home() {
 
             {/* Bottom block: uniform placement */}
             <div className="pt-2">
-              <div className="text-xs text-gray-500">Posted {product.posted}</div>
-              <div className="mt-1 text-xs text-gray-500">Distance: {meta.distance} mi</div>
-
+              <div className="text-xs text-gray-500">Posted {formatPosted(product)}</div>
+               <div className="mt-1 text-xs text-gray-500">Distance: {meta.distance} mi</div> 
               <div className="mt-3">
                 <button
                   onClick={() => {
@@ -584,10 +708,7 @@ export default function Home() {
       </div>
     );
   })}
-</div>
-
-
-        
+</div>   
 
         <div className="flex-1"></div>
       </div>
@@ -627,101 +748,139 @@ export default function Home() {
         </div>
       )}
 
-      {/* Filter Modal */}
-      {isFilterOpen && (
-        <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
-              <button
-                onClick={() => setIsFilterOpen(false)}
-                className="text-sm text-gray-500 hover:text-gray-700"
-              >
-                Close
-              </button>
-            </div>
+ {/* Filter Modal */}
+{isFilterOpen && (
+  <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 px-4">
+    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
+        <button
+          onClick={() => setIsFilterOpen(false)}
+          className="text-sm text-gray-500 hover:text-gray-700"
+        >
+          Close
+        </button>
+      </div>
 
-            <div className="mt-4 space-y-4">
-              {/* Distance */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Distance
-                </label>
-                <select className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500">
-                  <option>Any distance</option>
-                  <option>Within 1 mile</option>
-                  <option>Within 3 miles</option>
-                  <option>Within 5 miles</option>
-                </select>
-              </div>
+      <div className="mt-4 space-y-4">
+        {/* Distance */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Distance
+          </label>
+          <select
+            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
+            value={filters.distance}
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, distance: e.target.value }))
+            }
+          >
+            <option value="any">Any distance</option>
+            <option value="1">Within 1 mile</option>
+            <option value="3">Within 3 miles</option>
+            <option value="5">Within 5 miles</option>
+          </select>
+        </div>
 
-              {/* Price */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Price range ($)
-                </label>
-                <div className="mt-1 flex gap-3">
-                  <input
-                    type="number"
-                    placeholder="Min"
-                    className="w-1/2 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Max"
-                    className="w-1/2 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
-                  />
-                </div>
-              </div>
-
-              {/* Condition */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Condition
-                </label>
-                <select className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500">
-                  <option>Any condition</option>
-                  <option>New</option>
-                  <option>Like new</option>
-                  <option>Good</option>
-                  <option>Fair</option>
-                </select>
-              </div>
-
-              {/* Date posted */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Date posted
-                </label>
-                <select className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500">
-                  <option>Any time</option>
-                  <option>Last 24 hours</option>
-                  <option>Last 3 days</option>
-                  <option>Last week</option>
-                  <option>Last month</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-              >
-                Clear
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsFilterOpen(false)}
-                className="rounded-lg bg-[#395A7F] px-4 py-2 text-sm font-medium text-white hover:bg-[#A3CAE9]"
-              >
-                Apply filters
-              </button>
-            </div>
+        {/* Price */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Price range ($)
+          </label>
+          <div className="mt-1 flex gap-3">
+            <input
+              type="number"
+              placeholder="Min"
+              className="w-1/2 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
+              value={filters.minPrice}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, minPrice: e.target.value }))
+              }
+            />
+            <input
+              type="number"
+              placeholder="Max"
+              className="w-1/2 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
+              value={filters.maxPrice}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, maxPrice: e.target.value }))
+              }
+            />
           </div>
         </div>
-      )}
+
+        {/* Condition */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Condition
+          </label>
+          <select
+            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
+            value={filters.condition}
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, condition: e.target.value }))
+            }
+          >
+            <option value="used">Used</option>
+            <option value="new">New</option>
+            <option value="new without tags">New without tags</option>
+            <option value="Used - like new">Used - like new</option>
+          </select>
+        </div>
+
+        {/* Date posted */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Date posted
+          </label>
+          <select
+            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
+            value={filters.datePosted}
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, datePosted: e.target.value }))
+            }
+          >
+            <option value="any">Any time</option>
+            <option value="24h">Last 24 hours</option>
+            <option value="3d">Last 3 days</option>
+            <option value="7d">Last week</option>
+            <option value="30d">Last month</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="mt-6 flex justify-end gap-3">
+        <button
+          type="button"
+          className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+          onClick={() => {
+            setFilters({
+              distance: "any",
+              minPrice: "",
+              maxPrice: "",
+              condition: "any",
+              datePosted: "any",
+            });
+            setCurrentPage(1);
+          }}
+        >
+          Clear
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setCurrentPage(1); // reset to first page when filters change
+            setIsFilterOpen(false);
+          }}
+          className="rounded-lg bg-[#395A7F] px-4 py-2 text-sm font-medium text-white hover:bg-[#A3CAE9]"
+        >
+          Apply filters
+        </button>
+      </div>
     </div>
+  </div>
+)}
+</div>
   );
 }
 

@@ -367,6 +367,45 @@ export default function Profile() {
       } 
     });
   };
+
+
+  const handleProfileImageChange = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file || !currentUser) return;
+  
+    // local preview
+    if (imagePreview && imagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(imagePreview);
+    }
+    const blobUrl = URL.createObjectURL(file);
+    setImagePreview(blobUrl);
+  
+    setPfpUploading(true);
+    try {
+
+      const storage = getStorage(app);
+      const destPath = `profilePics/${currentUser.uid}/${Date.now()}_${file.name}`;
+      const fileRef = storageRef(storage, destPath);
+      await uploadBytes(fileRef, file);
+      const downloadURL = await getDownloadURL(fileRef);
+  
+      // Save to Firestore
+      await setDoc(
+        doc(db, "users", currentUser.uid),
+        { profilePic: downloadURL },
+        { merge: true }
+      );
+  
+      setProfilePic(downloadURL);
+      setImagePreview(downloadURL);
+    } catch (err) {
+      console.error("Failed to update profile image:", err);
+      setDeleteMessage("Failed to update profile photo. Please try again.");
+      setShowDeleteModal(true);
+    } finally {
+      setPfpUploading(false);
+    }
+  };
   
 
   return (

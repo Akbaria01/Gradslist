@@ -199,16 +199,19 @@ export default function CreateListings() {
 
         // Resolve seller display name at creation time so ListingDetail doesn't need an extra read.
         let sellerName = currentUser.displayName || currentUser.email || null;
+        let sellerProfilePic = null;
+
         try {
-          // Prefer a username stored in users/{uid} if available
-          const userSnap = await getDoc(doc(db, 'users', currentUser.uid));
+          const userSnap = await getDoc(doc(db, "users", currentUser.uid));
           if (userSnap.exists()) {
             const u = userSnap.data();
             sellerName = u.username || u.displayName || u.name || sellerName;
+            sellerProfilePic = u.profilePic || null;
           }
         } catch (e) {
-          console.warn('Could not read users/{uid} to resolve seller name:', e?.message || e);
+          console.warn("Could not read users/{uid} to resolve seller name:", e?.message || e);
         }
+
 
         const payload = {
           title: title,
@@ -223,6 +226,7 @@ export default function CreateListings() {
           image: imageURL || null,
           sellerId: currentUser.uid,
           seller: sellerName || null,
+          sellerProfilePic: sellerProfilePic || null,
           updatedAt: serverTimestamp(),
         };
 
