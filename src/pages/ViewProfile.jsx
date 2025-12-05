@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { doSignOut } from "../auth";
@@ -22,6 +23,11 @@ import {
 export default function ViewProfile() {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const { uid: paramUid } = useParams();
+
+  const uid = paramUid || currentUser?.uid;
+
+  const isOwnProfile = uid === currentUser?.uid;
 
   const [profileData, setProfileData] = useState({
     name: "User",
@@ -53,11 +59,11 @@ export default function ViewProfile() {
 
   // Load profile
   useEffect(() => {
-    if (!currentUser) return;
+    if (!uid) return;
 
     const loadProfile = async () => {
       try {
-        const userRef = doc(db, "users", currentUser.uid);
+        const userRef = doc(db, "users", uid);
         const snap = await getDoc(userRef);
         if (snap.exists()) {
           const data = snap.data();
@@ -89,13 +95,13 @@ export default function ViewProfile() {
 
   // Load reviews
   useEffect(() => {
-    if (!currentUser) return;
+    if (!uid) return;
 
     const loadReviews = async () => {
       try {
         const q = query(
           collection(db, "reviews"),
-          where("reviewedUserId", "==", currentUser.uid)
+          where("reviewedUserId", "==",uid)
         );
         const querySnapshot = await getDocs(q);
         const revs = querySnapshot.docs.map((doc) => doc.data());
@@ -153,17 +159,39 @@ export default function ViewProfile() {
     setImagePreview(profileData.profilePic || "");
   };
 
-  const handleImageChange = (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    setNewProfileImageFile(file);
+  const handleImageChange = async (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file || !currentUser) return;
 
-    if (imagePreview && imagePreview.startsWith("blob:")) {
-      URL.revokeObjectURL(imagePreview);
-    }
-    const url = URL.createObjectURL(file);
-    setImagePreview(url);
-  };
+  // local preview
+  if (imagePreview && imagePreview.startsWith("blob:")) {
+    URL.revokeObjectURL(imagePreview);
+  }
+  const localURL = URL.createObjectURL(file);
+  setImagePreview(localURL);
+
+  try {
+    // upload instantly
+    const storage = getStorage(app);
+    const destPath = `profilePics/${currentUser.uid}/${Date.now()}_${file.name}`;
+    const fileRef = storageRef(storage, destPath);
+
+    await uploadBytes(fileRef, file);
+    const downloadURL = await getDownloadURL(fileRef);
+
+    // save directly to Firestore
+    const userRef = doc(db, "users", currentUser.uid);
+    await setDoc(userRef, { profilePic: downloadURL }, { merge: true });
+
+    // update UI
+    setProfileData(prev => ({ ...prev, profilePic: downloadURL }));
+
+    setSuccess("Profile photo updated!");
+  } catch (err) {
+    console.error(err);
+    setError("Failed to upload profile photo.");
+  }
+};
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
@@ -205,7 +233,7 @@ export default function ViewProfile() {
           username: trimmedName,
           email: trimmedEmail,
           phone: profileData.phone.trim() || "",
-          profilePic: profilePicURL || "",
+          profilePic: profilePicURL,
         },
         { merge: true }
       );
@@ -215,8 +243,9 @@ export default function ViewProfile() {
         name: trimmedName,
         email: trimmedEmail,
         phone: profileData.phone.trim() || "",
-        profilePic: profilePicURL || "",
+        profilePic: profilePicURL,
       }));
+      setImagePreview(profilePicURL);
 
       setSuccess("Profile updated successfully.");
       setEditing(false);
@@ -266,12 +295,27 @@ export default function ViewProfile() {
   />
 </div>
 
-          <button
-            onClick={handleLogOut}
-            className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg font-semibold text-lg"
-          >
-            Log Out
-          </button>
+          </div>
+          {isOwnProfile && (
+            <button
+              type="button"
+              onClick={() => document.getElementById("profilePicInput").click()}
+              className={`px-4 py-2 text-sm rounded-lg font-medium shadow-sm ${buttonStyle}`}
+            
+            >
+              Edit Photo
+            </button>
+          )}
+          <br/>
+
+          {isOwnProfile && (
+            <button
+              onClick={handleLogOut}
+              className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg font-semibold text-lg"
+            >
+              Log Out
+            </button>
+          )}
         </div>
 
         {/* Right Column: User Info + Reviews */}
@@ -285,7 +329,7 @@ export default function ViewProfile() {
               <h2 className="text-2xl font-semibold text-gray-900">
                 Profile Information
               </h2>
-              {!editing ? (
+              {isOwnProfile && !editing ? (
                 <button
                   type="button"
                   onClick={handleStartEdit}
@@ -293,7 +337,7 @@ export default function ViewProfile() {
                 >
                   Edit Profile
                 </button>
-              ) : (
+              ) : isOwnProfile && editing ? (
                 <div className="flex gap-3">
                   <button
                     type="button"
@@ -311,7 +355,7 @@ export default function ViewProfile() {
                     {saving ? "Saving…" : "Save Changes"}
                   </button>
                 </div>
-              )}
+              ) : null}
             </div>
 
             {error && (
@@ -328,7 +372,7 @@ export default function ViewProfile() {
             {/* Name */}
             <div className="flex flex-col sm:flex-row items-center gap-6">
               <p className="text-xl font-bold text-gray-900 w-24">Name:</p>
-              {editing ? (
+              {isOwnProfile && editing ? (
                 <input
                   type="text"
                   value={profileData.name}
@@ -351,7 +395,7 @@ export default function ViewProfile() {
             {/* Email */}
             <div className="flex flex-col sm:flex-row items-center gap-6">
               <p className="text-xl font-bold text-gray-900 w-24">Email:</p>
-              {editing ? (
+              { isOwnProfile && editing ? (
                 <input
                   type="email"
                   value={profileData.email}
@@ -374,7 +418,7 @@ export default function ViewProfile() {
             {/* Phone (optional) */}
             <div className="flex flex-col sm:flex-row items-center gap-6">
               <p className="text-xl font-bold text-gray-900 w-24">Phone:</p>
-              {editing ? (
+              {isOwnProfile && editing ? (
                 <input
                   type="tel"
                   value={profileData.phone}

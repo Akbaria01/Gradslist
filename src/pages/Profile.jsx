@@ -1,4 +1,3 @@
-// src/pages/Profile.jsx
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -447,12 +446,6 @@ export default function Profile() {
         </div>
       )}
 
-      <input
-        type="file"
-        accept="image/png,image/jpeg"
-        className="hidden"
-        onChange={handleProfileImageChange}
-      />
     </label>
 
     {pfpUploading && (
@@ -468,7 +461,7 @@ export default function Profile() {
       <p className="text-xs text-gray-500 truncate">{user.email}</p>
     )}
     <button
-      onClick={() => navigate("/viewprofile")}
+      onClick={() => navigate(`/viewprofile/${currentUser?.uid}`)}
       className="text-sm text-sky-600 hover:underline mt-1"
     >
       View Profile

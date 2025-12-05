@@ -408,6 +408,23 @@ useEffect(() => {
   <div className="mt-2 text-sm text-gray-600">Items sold: {itemsSold}</div>
 </div>
 
+              <div className="w-24 h-24 rounded-full bg-gray-200 mb-4" />
+              <div className="text-lg font-semibold text-gray-900">{sellerName}</div>
+              <div className="mt-2 flex">{renderStars(4)}</div>
+              <div className="mt-2 text-sm text-gray-500">(4.0)</div>
+              <div className="mt-2 text-sm text-gray-600">Items sold: {itemsSold}</div>
+              <br />
+              {/* VIEW PROFILE BUTTON HERE */}
+              {listing.sellerId && (
+                <button
+                  onClick={() => navigate(`/viewprofile/${listing.sellerId}`)}
+                  className="w-fit bg-[#395A7F] text-white px-4 py-2 rounded-md font-semibold"
+
+              >
+                View Profile
+              </button>
+              )}
+            </div>
 
             <div className="mt-6">
               <button
