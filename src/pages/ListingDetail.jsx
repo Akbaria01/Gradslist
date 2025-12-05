@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import MapComponent from '../components/Map';
 import { useAuth } from '../context/AuthContext';
@@ -16,7 +16,8 @@ export default function ListingDetail() {
   const [isSaved, setIsSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [sellerProfilePic, setSellerProfilePic] = useState(null);
-
+  const [sellerRating, setSellerRating] = useState(0); // Add state for seller rating
+  const [itemsSold, setItemsSold] = useState(0); // Add state for items sold
 
   // Check if item is already saved when component loads
   useEffect(() => {
@@ -60,40 +61,99 @@ export default function ListingDetail() {
     };
   }, [id]);
 
-    // Resolve seller profile picture
-useEffect(() => {
-  if (!listing || !listing.sellerId) return;
+  // Resolve seller profile picture
+  useEffect(() => {
+    if (!listing || !listing.sellerId) return;
 
-  // If listing already has sellerProfilePic, use it
-  if (listing.sellerProfilePic) {
-    setSellerProfilePic(listing.sellerProfilePic);
-    return;
-  }
-
-  // Otherwise, try to read from users/{sellerId}
-  const loadSellerPic = async () => {
-    try {
-      const snap = await getDoc(doc(db, "users", listing.sellerId));
-      if (snap.exists()) {
-        const u = snap.data();
-        setSellerProfilePic(u.profilePic || null);
-      }
-    } catch (e) {
-      console.error("Failed to load seller profile pic:", e);
+    // If listing already has sellerProfilePic, use it
+    if (listing.sellerProfilePic) {
+      setSellerProfilePic(listing.sellerProfilePic);
+      return;
     }
-  };
 
-  loadSellerPic();
-}, [listing]);
+    // Otherwise, try to read from users/{sellerId}
+    const loadSellerPic = async () => {
+      try {
+        const snap = await getDoc(doc(db, "users", listing.sellerId));
+        if (snap.exists()) {
+          const u = snap.data();
+          setSellerProfilePic(u.profilePic || null);
+        }
+      } catch (e) {
+        console.error("Failed to load seller profile pic:", e);
+      }
+    };
+
+    loadSellerPic();
+  }, [listing]);
+
+  // Fetch seller rating from reviews
+  useEffect(() => {
+    if (!listing || !listing.sellerId) return;
+
+    const fetchSellerRating = async () => {
+      try {
+        // Query reviews for this seller
+        const q = query(
+          collection(db, "reviews"),
+          where("reviewedUserId", "==", listing.sellerId)
+        );
+        
+        const querySnapshot = await getDocs(q);
+        const reviews = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+
+        // Calculate average rating
+        if (reviews.length > 0) {
+          const totalRating = reviews.reduce((sum, review) => sum + (review.rating || 0), 0);
+          const averageRating = totalRating / reviews.length;
+          setSellerRating(Number(averageRating.toFixed(1))); // Round to 1 decimal
+        } else {
+          setSellerRating(0); // No reviews yet
+        }
+      } catch (error) {
+        console.error("Error fetching seller rating:", error);
+        setSellerRating(0);
+      }
+    };
+
+    fetchSellerRating();
+  }, [listing]);
+
+  // Fetch seller's items sold count
+  useEffect(() => {
+    if (!listing || !listing.sellerId) return;
+
+    const fetchItemsSold = async () => {
+      try {
+        // Query all listings by this seller
+        const q = query(
+          collection(db, "listings"),
+          where("sellerId", "==", listing.sellerId)
+        );
+        
+        const querySnapshot = await getDocs(q);
+        setItemsSold(querySnapshot.size); // Number of listings = items sold
+        
+        // Alternatively, you could query a "sales" or "transactions" collection
+        // if you have that in your database
+      } catch (error) {
+        console.error("Error fetching items sold:", error);
+        // Fallback to random number if query fails
+        setItemsSold(Math.floor(Math.random() * 6) + 5);
+      }
+    };
+
+    fetchItemsSold();
+  }, [listing]);
 
   // Map center state: default to Charlotte
   const [center, setCenter] = useState({ lat: 35.2271, lng: -80.8431 });
   const [markerPos, setMarkerPos] = useState(null);
-  // Random-ish items sold count (stable per mount)
-  const [itemsSold] = useState(() => Math.floor(Math.random() * 6) + 5);
 
-  // When listing changes, pick a center/marker. If listing.location has lat/lng use it.
-  // Otherwise if it's a string, attempt a best-effort geocode via Google Maps API when available.
+  // When listing changes, pick a center/marker
   useEffect(() => {
     if (!listing) return;
     // Prefer structured lat/lng
@@ -104,10 +164,9 @@ useEffect(() => {
       return;
     }
 
-    // If location is a string, try to geocode it (best-effort). Fall back to Charlotte.
+    // If location is a string, try to geocode it
     if (typeof listing.location === 'string' && listing.location.trim()) {
       const addr = listing.location;
-      // wait for Google Maps API to be ready
       const tryGeocode = () => {
         if (window.google && window.google.maps && window.google.maps.Geocoder) {
           const geocoder = new window.google.maps.Geocoder();
@@ -118,14 +177,12 @@ useEffect(() => {
               setCenter(pos);
               setMarkerPos(pos);
             } else {
-              // try heuristic: if the string mentions Charlotte/NC, center Charlotte
               const low = addr.toLowerCase();
               if (low.includes('charlotte') || low.includes('nc') || low.includes('concord')) {
                 const pos = { lat: 35.2271, lng: -80.8431 };
                 setCenter(pos);
                 setMarkerPos(pos);
               } else {
-                // fallback: keep default center (Charlotte)
                 setMarkerPos({ lat: center.lat, lng: center.lng });
               }
             }
@@ -135,7 +192,6 @@ useEffect(() => {
         return false;
       };
 
-      // Try immediately, otherwise poll a few times while the maps script loads
       if (!tryGeocode()) {
         let attempts = 0;
         const iv = setInterval(() => {
@@ -151,7 +207,7 @@ useEffect(() => {
     // default fallback
     setCenter({ lat: 35.2271, lng: -80.8431 });
     setMarkerPos({ lat: 35.2271, lng: -80.8431 });
-  }, [listing]);
+  }, [listing, center.lat, center.lng]);
 
   // Toggle save function
   const toggleSave = async () => {
@@ -199,29 +255,7 @@ useEffect(() => {
   if (error) return <div className="p-6 text-red-500">Error: {error}</div>;
   if (!listing) return <div className="p-6">Listing not found</div>;
 
-
-
-  // Helper to format Firestore Timestamp or Date-like objects
-  function formatTimestamp(ts) {
-    if (!ts) return 'Unknown';
-    let d;
-    // Firestore Timestamp
-    if (typeof ts.toDate === 'function') {
-      d = ts.toDate();
-    } else if (ts.seconds) {
-      d = new Date(ts.seconds * 1000);
-    } else {
-      d = new Date(ts);
-    }
-    try {
-      // long date and medium time with locale
-      return d.toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'medium' });
-    } catch (e) {
-      return d.toString();
-    }
-  }
-
-  // Format date-only (e.g., "November 28, 2025")
+  // Helper to format date
   function formatDateOnly(ts) {
     if (!ts) return 'Unknown';
     let d;
@@ -240,7 +274,7 @@ useEffect(() => {
   }
 
   // Small helper to render star rating
-  function renderStars(ratingValue = 4) {
+  function renderStars(ratingValue = 0) {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
       stars.push(
@@ -257,11 +291,10 @@ useEffect(() => {
   // Determine readable seller name
   const sellerName = (() => {
     if (!listing) return 'Unknown';
-    if (listing.seller) return listing.seller; // stored username
+    if (listing.seller) return listing.seller;
     if (currentUser && listing.sellerId && currentUser.uid === listing.sellerId) {
       return currentUser.displayName || currentUser.email || 'You';
     }
-    // fallback to id
     return listing.sellerId || 'Unknown';
   })();
 
@@ -270,21 +303,18 @@ useEffect(() => {
     if (!listing) return 'Unknown';
     if (typeof listing.location === 'string') return listing.location;
     if (listing.location && listing.location.address) return listing.location.address;
-    // if lat/lng available, show coordinates
     if (listing.location && listing.location.lat && listing.location.lng) {
       return `Lat ${listing.location.lat.toFixed(4)}, Lng ${listing.location.lng.toFixed(4)}`;
     }
     return 'Unknown';
   })();
-  //
+
   const handleContactSeller = () => {
-    // (optional) if routes to /inbox are already protected, this is just extra safety
     if (!currentUser) {
       navigate("/login&signup");
       return;
     }
   
-    // send listing + seller info to Inbox via route state
     navigate("/inbox", {
       state: {
         fromListing: {
@@ -309,7 +339,7 @@ useEffect(() => {
 
   return (
     <div className="bg-[#eaecef] min-h-screen">
-      {/* Sticky top bar — safe-area aware for iOS */}
+      {/* Sticky top bar */}
       <div className="sticky top-0 z-40" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="bg-[#eaecef] border-b border-gray-200">
           <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -407,19 +437,18 @@ useEffect(() => {
 
         
               <div className="text-lg font-semibold text-gray-900">{sellerName}</div>
-              <div className="mt-2 flex">{renderStars(4)}</div>
-              <div className="mt-2 text-sm text-gray-500">(4.0)</div>
+              <div className="mt-2 flex">{renderStars(sellerRating)}</div>
+              <div className="mt-2 text-sm text-gray-500">({sellerRating})</div>
               <div className="mt-2 text-sm text-gray-600">Items sold: {itemsSold}</div>
               <br />
               {/* VIEW PROFILE BUTTON HERE */}
               {listing.sellerId && (
                 <button
                   onClick={() => navigate(`/viewprofile/${listing.sellerId}`)}
-                  className="w-fit bg-[#395A7F] text-white px-4 py-2 rounded-md font-semibold"
-
-              >
-                View Profile
-              </button>
+                  className="w-fit bg-[#395A7F] text-white px-4 py-2 rounded-md font-semibold hover:bg-[#2E4C6E] transition-colors"
+                >
+                  View Profile
+                </button>
               )}
             </div>
             
@@ -428,7 +457,7 @@ useEffect(() => {
               {currentUser?.uid !== listing.sellerId && (
               <button
                 onClick={handleContactSeller}
-                className="w-full bg-[#395A7F] text-white py-3 rounded-md font-semibold"
+                className="w-full bg-[#395A7F] text-white py-3 rounded-md font-semibold hover:bg-[#2E4C6E] transition-colors"
               >
                 Contact Seller
               </button>

@@ -162,7 +162,7 @@ export default function ViewProfile() {
       stars.push(
         <span
           key={i}
-          className={`text-2xl ${
+          className={`text-xl ${
             i <= rating ? "text-yellow-400" : "text-gray-300"
           }`}
         >
@@ -508,49 +508,46 @@ export default function ViewProfile() {
                 {reviews.length === 1 ? "review" : "reviews"})
               </span>
             </div>
-            <h2 className="text-2xl font-semibold text-gray-900 mt-4 mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900 mt-4 mb-6">
               Reviews About You
             </h2>
-            <div className="space-y-4">
+            
+            <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2">
               {reviews.length ? (
                 reviews.map((rev) => (
                   <div
                     key={rev.id}
-                    className="border-b border-gray-200 pb-3 last:border-b-0"
+                    className="border border-gray-300 rounded-lg p-5 bg-gray-50"
                   >
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <p className="text-lg font-medium text-gray-800">
-                          {rev.reviewerName}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {rev.createdAt.toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric'
-                          })}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-[2px]">
+                    {/* Reviewer Name */}
+                    <div className="mb-2">
+                      <p className="text-lg font-medium text-gray-900">
+                        {rev.reviewerName}
+                      </p>
+                    </div>
+                    
+                    {/* Star Rating */}
+                    <div className="mb-2">
+                      <div className="flex items-center gap-2">
                         {renderStars(rev.rating)}
                       </div>
                     </div>
                     
+                    {/* Item (Plain Text) */}
                     {rev.listingTitle && (
                       <div className="mb-2">
-                        <p className="text-sm text-gray-600">For listing:</p>
-                        <button
-                          onClick={() => navigate(`/listing/${rev.listingId}`)}
-                          className="w-fit bg-[#395A7F] text-white px-3 py-1 rounded-md text-sm font-medium hover:bg-[#2E4C6E] transition-colors"
-                        >
-                          {rev.listingTitle}
-                        </button>
+                        <p className="text-base font-medium text-gray-800">
+                          Item: {rev.listingTitle}
+                        </p>
                       </div>
                     )}
                     
-                    <p className="text-base text-gray-700 mt-1">
-                      {rev.comment}
-                    </p>
+                    {/* Review Text */}
+                    <div>
+                      <p className="text-base text-gray-700 mt-1">
+                        {rev.comment}
+                      </p>
+                    </div>
                   </div>
                 ))
               ) : (

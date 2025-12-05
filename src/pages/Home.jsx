@@ -31,15 +31,15 @@ const CATEGORY_OPTIONS = {
     "Tools",
   ],
   "Clothing, Shoes, & Accessories": [
-    "Women’s Clothing",
-    "Men’s Clothing",
+    "Women's Clothing",
+    "Men's Clothing",
     "Shoes",
     "Jewelry & Watches",
     "Bags & Accessories",
   ],
   "Baby & Kids": [
     "Baby Gear",
-    "Kids’ Clothing",
+    "Kids' Clothing",
     "Toys",
     "Strollers & Car Seats",
     "Nursery Furniture",
@@ -89,23 +89,22 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState(null);
   const [selectedFilter, setSelectedFilter] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [sellerRatings, setSellerRatings] = useState({}); // Store ratings by sellerId
+  const [loadingRatings, setLoadingRatings] = useState(true);
 
   const location = useLocation();
   const navigate = useNavigate();
   useEffect(() => {
     if (location.state?.resetHome) {
-    // reset filters & reload backend
       setSelectedFilter("");
       setCurrentPage(1);
       setProducts([]);
       fetchListings(null, "");
-
-    // remove reset flag so it doesn't run again on refresh
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);
 
-  const [products, setProducts] = useState([]); // from Firestore
+  const [products, setProducts] = useState([]);
   const itemsPerPage = 12;
 
   const [filters, setFilters] = useState({
@@ -116,20 +115,67 @@ export default function Home() {
     datePosted: "any",
   });
 
-  // SearchContext from your header
   const { searchQuery } = useSearch();
+
+  // Fetch seller ratings from reviews
+  const fetchSellerRatings = useCallback(async (listings) => {
+    if (!listings.length) {
+      setLoadingRatings(false);
+      return;
+    }
+
+    try {
+      const ratings = {};
+      const uniqueSellerIds = [...new Set(listings.map(p => p._raw?.sellerId).filter(Boolean))];
+      
+      // For each unique seller, fetch their reviews and calculate average rating
+      for (const sellerId of uniqueSellerIds) {
+        try {
+          const q = query(
+            collection(db, "reviews"),
+            where("reviewedUserId", "==", sellerId)
+          );
+          const querySnapshot = await getDocs(q);
+          
+          let totalRating = 0;
+          let reviewCount = 0;
+          
+          querySnapshot.forEach((doc) => {
+            const review = doc.data();
+            if (review.rating) {
+              totalRating += review.rating;
+              reviewCount++;
+            }
+          });
+          
+          if (reviewCount > 0) {
+            const averageRating = totalRating / reviewCount;
+            ratings[sellerId] = Number(averageRating.toFixed(1));
+          } else {
+            ratings[sellerId] = 0; // No reviews yet
+          }
+        } catch (error) {
+          console.error(`Error fetching ratings for seller ${sellerId}:`, error);
+          ratings[sellerId] = 0;
+        }
+      }
+      
+      setSellerRatings(ratings);
+    } catch (error) {
+      console.error("Error fetching seller ratings:", error);
+    } finally {
+      setLoadingRatings(false);
+    }
+  }, []);
 
   // Helper: run a query and return mapped products
   const runAndMap = async (q) => {
-
     const snap = await getDocs(q);
     const results = [];
     snap.forEach((doc) => {
       const data = doc.data();
-      // map Firestore fields to the UI fields your page expects
       const mapped = {
         id: doc.id,
-        // UI expects `name` for the card title — map from title/name
         name: data.title ?? data.name ?? "Untitled",
         price:
           data.price !== undefined
@@ -141,75 +187,120 @@ export default function Home() {
         distance: data.distance ?? "",
         image: data.imageUrl ?? data.image ?? data.photoUrl ?? "",
         alt: data.title ?? data.name ?? "listing image",
-        // keep description in raw if needed, but don't show it on the card
         description: data.description ?? "",
- 
- 
         seller: data.seller || data.sellerName || "Seller",
+        sellerId: data.sellerId,
         sellerProfilePic: data.sellerProfilePic || null,
         location: data.location || "",
-        // preserve original doc data if needed later
         _raw: data,
       };
- 
-      
-
       results.push(mapped);
     });
     return results;
   };
 
-  // Fetch listings from Firestore depending on selectedFilter and search
-
+  // Fetch listings from Firestore
   const fetchListings = useCallback(
-  async (filter = selectedFilter, search = searchQuery) => {
-    try {
-      let finalResults = [];
+    async (filter = selectedFilter, search = searchQuery) => {
+      try {
+        let finalResults = [];
+        const hasSearch = typeof search === "string" && search.trim().length > 0;
+        const s = hasSearch ? search.trim().toLowerCase() : null;
 
-      // normalize search
-      const hasSearch =
-        typeof search === "string" && search.trim().length > 0;
-      const s = hasSearch ? search.trim().toLowerCase() : null;
-
-      // Firestore query builder
-      const buildEqualityQuery = (field, value) => {
-        const ref = collection(db, "listings");
-
-        if (!value) {
-          try {
-            return query(ref, orderBy("createdAt", "desc"), limit(1000));
-          } catch {
-            return query(ref, limit(1000));
+        const buildEqualityQuery = (field, value) => {
+          const ref = collection(db, "listings");
+          if (!value) {
+            try {
+              return query(ref, orderBy("createdAt", "desc"), limit(1000));
+            } catch {
+              return query(ref, limit(1000));
+            }
           }
-        }
 
-        if (hasSearch) {
-          const start = s;
-          const end = s + "\uf8ff";
-
-          try {
-            return query(
-              ref,
-              where(field, "==", value),
-              where("titleLower", ">=", start),
-              where("titleLower", "<=", end),
-              orderBy("titleLower"),
-              limit(1000)
-            );
-          } catch {
+          if (hasSearch) {
+            const start = s;
+            const end = s + "\uf8ff";
+            try {
+              return query(
+                ref,
+                where(field, "==", value),
+                where("titleLower", ">=", start),
+                where("titleLower", "<=", end),
+                orderBy("titleLower"),
+                limit(1000)
+              );
+            } catch {
+              return query(ref, where(field, "==", value), limit(1000));
+            }
+          } else {
             return query(ref, where(field, "==", value), limit(1000));
           }
-        } else {
-          return query(ref, where(field, "==", value), limit(1000));
-        }
-      };
+        };
 
-      // -----------------------------
-      // CASE 1 — NO FILTER
-      // -----------------------------
-      if (!filter) {
-        if (hasSearch) {
-          // search by prefix
+        // CASE 1 — NO FILTER
+        if (!filter) {
+          if (hasSearch) {
+            try {
+              const q = query(
+                collection(db, "listings"),
+                where("titleLower", ">=", s),
+                where("titleLower", "<=", s + "\uf8ff"),
+                orderBy("titleLower"),
+                limit(1000)
+              );
+              finalResults = await runAndMap(q);
+            } catch {
+              const qAll = query(collection(db, "listings"), limit(1000));
+              const all = await runAndMap(qAll);
+              finalResults = all.filter((p) =>
+                p.name?.toLowerCase().includes(s)
+              );
+            }
+          } else {
+            const q = (() => {
+              try {
+                return query(
+                  collection(db, "listings"),
+                  orderBy("createdAt", "desc"),
+                  limit(1000)
+                );
+              } catch {
+                return query(collection(db, "listings"), limit(1000));
+              }
+            })();
+            finalResults = await runAndMap(q);
+          }
+          setProducts(finalResults);
+          fetchSellerRatings(finalResults);
+          setCurrentPage(1);
+          return;
+        }
+
+        // CASE 2 — FILTER ACTIVE
+        const normalizedFilter = filter.toLowerCase();
+        const qSub = query(
+          collection(db, "listings"),
+          where("subcategoryLower", "==", normalizedFilter),
+          limit(1000)
+        );
+
+        let subResults = await runAndMap(qSub);
+
+        if (subResults.length === 0) {
+          const qAll = query(collection(db, "listings"), limit(1000));
+          const all = await runAndMap(qAll);
+          subResults = all.filter((p) => {
+            const raw = p._raw || {};
+            return (
+              raw.subcategory?.toLowerCase() === normalizedFilter ||
+              raw.category?.toLowerCase() === normalizedFilter
+            );
+          });
+        }
+
+        finalResults = subResults;
+
+        if (finalResults.length === 0 && hasSearch) {
           try {
             const q = query(
               collection(db, "listings"),
@@ -218,170 +309,92 @@ export default function Home() {
               orderBy("titleLower"),
               limit(1000)
             );
-            finalResults = await runAndMap(q);
-          } catch {
-            const qAll = query(collection(db, "listings"), limit(1000));
-            const all = await runAndMap(qAll);
-            finalResults = all.filter((p) =>
-              p.name?.toLowerCase().includes(s)
-            );
-          }
-        } else {
-          // fetch all
-          const q = (() => {
-            try {
-              return query(
-                collection(db, "listings"),
-                orderBy("createdAt", "desc"),
-                limit(1000)
+            const global = await runAndMap(q);
+            finalResults = global.filter((p) => {
+              const raw = p._raw || {};
+              return (
+                raw.subcategory?.toLowerCase() === normalizedFilter ||
+                raw.category?.toLowerCase() === normalizedFilter
               );
-            } catch {
-              return query(collection(db, "listings"), limit(1000));
-            }
-          })();
-
-          finalResults = await runAndMap(q);
+            });
+          } catch {
+            finalResults = [];
+          }
         }
 
         setProducts(finalResults);
+        fetchSellerRatings(finalResults);
         setCurrentPage(1);
-        return;
+      } catch (err) {
+        console.error("Failed to fetch listings:", err);
+        setProducts([]);
+        setLoadingRatings(false);
       }
+    },
+    [selectedFilter, searchQuery, fetchSellerRatings]
+  );
 
-      // -----------------------------
-      // CASE 2 — FILTER ACTIVE
-      // Fix = lowercase compare fallback
-      // -----------------------------
-
-      const normalizedFilter = filter.toLowerCase();
-
-      // Try subcategory first
-      const qSub = query(
-        collection(db, "listings"),
-        where("subcategoryLower", "==", normalizedFilter),
-        limit(1000)
-      );
-
-      let subResults = await runAndMap(qSub);
-
-      if (subResults.length === 0) {
-        // fallback: manually match lowercase
-        const qAll = query(collection(db, "listings"), limit(1000));
-        const all = await runAndMap(qAll);
-
-        subResults = all.filter((p) => {
-          const raw = p._raw || {};
-          return (
-            raw.subcategory?.toLowerCase() === normalizedFilter ||
-            raw.category?.toLowerCase() === normalizedFilter
-          );
-        });
-      }
-
-      finalResults = subResults;
-
-      // If still empty AND search is active, do global search
-      if (finalResults.length === 0 && hasSearch) {
-        try {
-          const q = query(
-            collection(db, "listings"),
-            where("titleLower", ">=", s),
-            where("titleLower", "<=", s + "\uf8ff"),
-            orderBy("titleLower"),
-            limit(1000)
-          );
-
-          const global = await runAndMap(q);
-          finalResults = global.filter((p) => {
-            const raw = p._raw || {};
-            return (
-              raw.subcategory?.toLowerCase() === normalizedFilter ||
-              raw.category?.toLowerCase() === normalizedFilter
-            );
-          });
-        } catch {
-          finalResults = [];
-        }
-      }
-
-      setProducts(finalResults);
-      setCurrentPage(1);
-    } catch (err) {
-      console.error("Failed to fetch listings:", err);
-      setProducts([]);
-    }
-  },
-  [selectedFilter, searchQuery]
-);
-
-
-  // Fetch on mount (load ALL listings)
+  // Fetch on mount
   useEffect(() => {
     fetchListings(null, searchQuery);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // mount only
+  }, []);
 
-  // When searchQuery changes (Header sets it), always query backend
+  // When searchQuery changes
   useEffect(() => {
     fetchListings(selectedFilter, searchQuery);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
-  // When selectedFilter changes due to clicking subcategory, fetchListings will be called
-  // We call fetchListings on click handler directly to ensure clicking same filter re-fetches
+  // Handle subcategory click
   const handleSubcategoryClick = async (sub) => {
-  const normalized = sub.toLowerCase();
-  setSelectedFilter(normalized);
-  await fetchListings(normalized, searchQuery);
-};
+    const normalized = sub.toLowerCase();
+    setSelectedFilter(normalized);
+    await fetchListings(normalized, searchQuery);
+  };
 
-  // -------------------------
-  // Pagination (client-side slice of backend results)
-  // -------------------------
+  // Filter products based on selected filters
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
-      // ---- PRICE filter ----
       const numericPrice = p.price
         ? Number(String(p.price).replace(/[^0-9.]/g, "")) || 0
         : 0;
-  
+
       if (filters.minPrice && numericPrice < Number(filters.minPrice)) {
         return false;
       }
       if (filters.maxPrice && numericPrice > Number(filters.maxPrice)) {
         return false;
       }
-  
-      // ---- CONDITION filter ----
+
       const rawCondition =
         (p._raw?.condition || p.condition || "").toString().toLowerCase();
-  
+
       if (filters.condition !== "any" && rawCondition) {
         if (rawCondition !== filters.condition) {
           return false;
         }
       }
-      // ---- DATE POSTED filter ----
+
       if (filters.datePosted !== "any") {
         const raw = p._raw || {};
         const ts = raw.createdAt || raw.postedAt || p.createdAt;
-  
+
         if (ts) {
           const d = ts.toDate ? ts.toDate() : new Date(ts);
           const diffMs = Date.now() - d.getTime();
           const diffDays = diffMs / (1000 * 60 * 60 * 24);
-  
+
           if (filters.datePosted === "24h" && diffDays > 1) return false;
           if (filters.datePosted === "3d" && diffDays > 3) return false;
           if (filters.datePosted === "7d" && diffDays > 7) return false;
           if (filters.datePosted === "30d" && diffDays > 30) return false;
         }
       }
-  
+
       return true;
     });
   }, [products, filters]);
-  
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -390,14 +403,15 @@ export default function Home() {
     startIndex + itemsPerPage
   );
 
-  // Small helper to render star rating
-  function renderStars(ratingValue = 4) {
+  // Helper to render star rating - updated to show actual ratings
+  function renderStars(ratingValue = 0) {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
       stars.push(
         <span
           key={i}
-          className={`text-sm ${i <= ratingValue ? 'text-yellow-400' : 'text-gray-300'}`}>
+          className={`text-sm ${i <= ratingValue ? 'text-yellow-400' : 'text-gray-300'}`}
+        >
           ★
         </span>
       );
@@ -405,62 +419,56 @@ export default function Home() {
     return stars;
   }
 
+  // Calculate distance - keep random for now since we don't have real location data
   const randomMeta = useMemo(() => {
     const map = {};
     filteredProducts.forEach((p) => {
       const id = p.id || JSON.stringify(p).slice(0, 8);
-      const rating = Math.floor(Math.random() * 3) + 3; // 3..5
       const distance = (Math.random() * 5 + 1).toFixed(1); // 1.0..6.0
-      map[id] = { rating, distance };
+      map[id] = { distance };
     });
     return map;
   }, [filteredProducts]);
-  
 
-  
+  function formatPosted(product) {
+    const raw = product._raw || {};
+    const ts = raw.createdAt || raw.postedAt || product.createdAt;
 
+    if (!ts) {
+      return product.posted || "";
+    }
 
-function formatPosted(product) {
-  const raw = product._raw || {};
-  const ts = raw.createdAt || raw.postedAt || product.createdAt;
+    const date = ts.toDate ? ts.toDate() : new Date(ts);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMinutes = diffMs / (1000 * 60);
+    const diffHours = diffMinutes / 60;
+    const diffDays = diffHours / 24;
 
-  if (!ts) {
-    return product.posted || ""; // fallback if nothing else
+    if (diffMinutes < 60) {
+      const m = Math.max(1, Math.round(diffMinutes));
+      return `${m} min${m === 1 ? "" : "s"} ago`;
+    }
+    if (diffHours < 24) {
+      const h = Math.round(diffHours);
+      return `${h} hour${h === 1 ? "" : "s"} ago`;
+    }
+    if (diffDays < 7) {
+      const d = Math.round(diffDays);
+      return `${d} day${d === 1 ? "" : "s"} ago`;
+    }
+    if (diffDays < 30) {
+      const w = Math.round(diffDays / 7);
+      return `${w} week${w === 1 ? "" : "s"} ago`;
+    }
+    const months = Math.round(diffDays / 30);
+    if (months < 12) {
+      return `${months} month${months === 1 ? "" : "s"} ago`;
+    }
+    const years = Math.round(diffDays / 365);
+    return `${years} year${years === 1 ? "" : "s"} ago`;
   }
 
-  const date = ts.toDate ? ts.toDate() : new Date(ts);
-  const now = new Date();
-  const diffMs = now - date;
-  const diffMinutes = diffMs / (1000 * 60);
-  const diffHours = diffMinutes / 60;
-  const diffDays = diffHours / 24;
-
-  if (diffMinutes < 60) {
-    const m = Math.max(1, Math.round(diffMinutes));
-    return `${m} min${m === 1 ? "" : "s"} ago`;
-  }
-  if (diffHours < 24) {
-    const h = Math.round(diffHours);
-    return `${h} hour${h === 1 ? "" : "s"} ago`;
-  }
-  if (diffDays < 7) {
-    const d = Math.round(diffDays);
-    return `${d} day${d === 1 ? "" : "s"} ago`;
-  }
-  if (diffDays < 30) {
-    const w = Math.round(diffDays / 7);
-    return `${w} week${w === 1 ? "" : "s"} ago`;
-  }
-  const months = Math.round(diffDays / 30);
-  if (months < 12) {
-    return `${months} month${months === 1 ? "" : "s"} ago`;
-  }
-  const years = Math.round(diffDays / 365);
-  return `${years} year${years === 1 ? "" : "s"} ago`;
-}
-
-
-  // Keep all JSX identical to original — only data source changed
   return (
     <div className="bg-[#eaecef] min-h-screen overflow-x-hidden">
       {/* -------- SUBHEADER -------- */}
@@ -470,12 +478,9 @@ function formatPosted(product) {
           <nav className="hidden lg:flex flex-nowrap gap-x-8 justify-center relative">
             {Object.keys(CATEGORY_OPTIONS).map((category) => (
               <div key={category} className="relative group">
-                {/* CATEGORY LABEL */}
                 <span className="whitespace-nowrap text-sm font-medium text-gray-700 hover:text-gray-900 cursor-pointer">
                   {category}
                 </span>
-
-                {/* FIXED DROPDOWN  */}
                 <ul
                   className={`
                     absolute mt-2 w-48 bg-white shadow-lg rounded-md
@@ -515,7 +520,6 @@ function formatPosted(product) {
               </button>
             </div>
 
-            {/* Responsive Dropdown */}
             {isMobileMenuOpen && (
               <div className="mt-4 bg-white rounded-lg shadow-lg border border-gray-200 max-h-96 overflow-y-auto">
                 {Object.keys(CATEGORY_OPTIONS).map((category) => (
@@ -556,6 +560,7 @@ function formatPosted(product) {
           </div>
         </div>
       </div>
+
       {/* Main content */}
       <div className="pt-2 min-h-[calc(100vh-200px)] flex flex-col">
         {/* Title + Filter + Sort */}
@@ -591,7 +596,7 @@ function formatPosted(product) {
           </div>
         </div>
         
-        {/* ---------- NO RESULTS MESSAGE GOES HERE ---------- */}
+        {/* No results message */}
         {products.length === 0 && (
           <div className="text-center py-16 text-gray-600 text-xl px-4">
             {selectedFilter ? (
@@ -605,21 +610,17 @@ function formatPosted(product) {
           </div>
         )}
         
-              {/* Listing cards */}
+        {/* Listing cards */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 px-4 lg:px-6">
           {currentProducts.map((product) => {
-            const meta = randomMeta[product.id] || { rating: "4.6", distance: "2.3" };
-
-            const sellerName =
-              product.seller ||
-              product._raw?.seller ||
-              product._raw?.sellerName ||
-              "Seller";
-
-            const sellerPic =
-              product.sellerProfilePic ||
-              product._raw?.sellerProfilePic ||
-              null;
+            const meta = randomMeta[product.id] || { distance: "2.3" };
+            const sellerName = product.seller || product._raw?.seller || "Seller";
+            const sellerPic = product.sellerProfilePic || product._raw?.sellerProfilePic || null;
+            const sellerId = product.sellerId || product._raw?.sellerId;
+            
+            // Get seller rating from fetched ratings
+            const sellerRating = sellerId ? sellerRatings[sellerId] || 0 : 0;
+            const ratingValue = sellerRating > 0 ? sellerRating : 0;
 
             const city =
               (product.location || product._raw?.location || "")
@@ -629,91 +630,98 @@ function formatPosted(product) {
                 .replace(/\s+/g, " ")
                 .trim() || "Unknown";
 
-  return (
-    <div
-      key={product.id}
-      className="group relative flex flex-col h-full rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
-    >
-      {/* Username + stars above image */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-3">
-          {sellerPic ? (
-            <img
-              src={sellerPic}
-              alt={sellerName}
-              className="w-8 h-8 rounded-full object-cover border border-gray-300"
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs text-gray-500">
-              {sellerName?.charAt(0).toUpperCase()}
-            </div>
-          )}
-          <div className="text-sm font-medium text-gray-900">{sellerName}</div>
-        </div>
+            return (
+              <div
+                key={product.id}
+                className="group relative flex flex-col h-full rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+              >
+                {/* Username + stars above image - NOW WITH REAL RATINGS */}
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    {sellerPic ? (
+                      <img
+                        src={sellerPic}
+                        alt={sellerName}
+                        className="w-8 h-8 rounded-full object-cover border border-gray-300"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs text-gray-500">
+                        {sellerName?.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="text-sm font-medium text-gray-900">{sellerName}</div>
+                  </div>
 
-        <div className="text-sm">{renderStars(meta.rating)}</div>
-      </div>
+                  <div className="text-sm">
+                    {renderStars(ratingValue)}
+                    {sellerRating > 0 && (
+                      <span className="ml-1 text-xs text-gray-500">
+                        {sellerRating}
+                      </span>
+                    )}
+                  </div>
+                </div>
 
-        {/* Image left, info right on larger screens */}
-        <div className="flex flex-col md:flex-row gap-4 h-full items-stretch">
-          {/* Image: force full height so row children match */}
-          <div className="md:w-1/2 w-full overflow-hidden rounded-lg bg-gray-100 h-[220px] md:h-full">
-            <img
-              src={product.image}
-              alt={product.alt}
-              className="h-full w-full object-cover transition group-hover:scale-105"
-            />
-          </div>
+                {/* Image left, info right on larger screens */}
+                <div className="flex flex-col md:flex-row gap-4 h-full items-stretch">
+                  {/* Image */}
+                  <div className="md:w-1/2 w-full overflow-hidden rounded-lg bg-gray-100 h-[220px] md:h-full">
+                    <img
+                      src={product.image}
+                      alt={product.alt}
+                      className="h-full w-full object-cover transition group-hover:scale-105"
+                    />
+                  </div>
 
-          {/* Info column: full height + evenly spaced vertically */}
-          <div className="flex-1 flex flex-col justify-between md:py-1 h-full">
-            {/* Top block: title + price + location */}
-            <div>
-              <h3
-               className="text-sm font-semibold text-gray-900 h-[48px]"
-              style={{
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden'
-              }}
-            >
-              {product.name || product.title || 'Untitled'}
-              </h3>
+                  {/* Info column */}
+                  <div className="flex-1 flex flex-col justify-between md:py-1 h-full">
+                    {/* Top block: title + price + location */}
+                    <div>
+                      <h3
+                        className="text-sm font-semibold text-gray-900 h-[48px]"
+                        style={{
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden'
+                        }}
+                      >
+                        {product.name || product.title || 'Untitled'}
+                      </h3>
 
-              <p className="mt-2 text-sm font-bold text-gray-900">{product.price}</p>
-              <p className="mt-1 text-xs text-gray-500">Location: {city}</p>
-            </div>
+                      <p className="mt-2 text-sm font-bold text-gray-900">{product.price}</p>
+                      <p className="mt-1 text-xs text-gray-500">Location: {city}</p>
+                    </div>
 
-            {/* Bottom block: uniform placement */}
-            <div className="pt-2">
-              <div className="text-xs text-gray-500">Posted {formatPosted(product)}</div>
-               <div className="mt-1 text-xs text-gray-500">Distance: {meta.distance} mi</div> 
-              <div className="mt-3">
-                <button
-                  onClick={() => {
-                    const payload = product._raw
-                      ? { id: product.id, ...product._raw }
-                      : { id: product.id, ...product };
-                    navigate(`/listing/${product.id}`, { state: { listing: payload } });
-                  }}
-                  className="w-full inline-flex items-center justify-center rounded-lg bg-[#395A7F] px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-[#A3CAE9]"
-                >
-                  View details
-                </button>
+                    {/* Bottom block */}
+                    <div className="pt-2">
+                      <div className="text-xs text-gray-500">Posted {formatPosted(product)}</div>
+                      <div className="mt-1 text-xs text-gray-500">Distance: {meta.distance} mi</div>
+                      <div className="mt-3">
+                        <button
+                          onClick={() => {
+                            const payload = product._raw
+                              ? { id: product.id, ...product._raw }
+                              : { id: product.id, ...product };
+                            navigate(`/listing/${product.id}`, { state: { listing: payload } });
+                          }}
+                          className="w-full inline-flex items-center justify-center rounded-lg bg-[#395A7F] px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-[#A3CAE9]"
+                        >
+                          View details
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  })}
-</div>   
+            );
+          })}
+        </div>   
 
         <div className="flex-1"></div>
       </div>
       
-      {/* Pagination - only show when subcategory is selected */}
+      {/* Pagination */}
       {true && (
         <div className="flex items-center justify-center px-4 lg:px-6 py-8">
           <nav className="flex items-center space-x-2">
@@ -748,139 +756,139 @@ function formatPosted(product) {
         </div>
       )}
 
- {/* Filter Modal */}
-{isFilterOpen && (
-  <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 px-4">
-    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
-        <button
-          onClick={() => setIsFilterOpen(false)}
-          className="text-sm text-gray-500 hover:text-gray-700"
-        >
-          Close
-        </button>
-      </div>
+      {/* Filter Modal */}
+      {isFilterOpen && (
+        <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
+              <button
+                onClick={() => setIsFilterOpen(false)}
+                className="text-sm text-gray-500 hover:text-gray-700"
+              >
+                Close
+              </button>
+            </div>
 
-      <div className="mt-4 space-y-4">
-        {/* Distance */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Distance
-          </label>
-          <select
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
-            value={filters.distance}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, distance: e.target.value }))
-            }
-          >
-            <option value="any">Any distance</option>
-            <option value="1">Within 1 mile</option>
-            <option value="3">Within 3 miles</option>
-            <option value="5">Within 5 miles</option>
-          </select>
-        </div>
+            <div className="mt-4 space-y-4">
+              {/* Distance */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Distance
+                </label>
+                <select
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  value={filters.distance}
+                  onChange={(e) =>
+                    setFilters((prev) => ({ ...prev, distance: e.target.value }))
+                  }
+                >
+                  <option value="any">Any distance</option>
+                  <option value="1">Within 1 mile</option>
+                  <option value="3">Within 3 miles</option>
+                  <option value="5">Within 5 miles</option>
+                </select>
+              </div>
 
-        {/* Price */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Price range ($)
-          </label>
-          <div className="mt-1 flex gap-3">
-            <input
-              type="number"
-              placeholder="Min"
-              className="w-1/2 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
-              value={filters.minPrice}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, minPrice: e.target.value }))
-              }
-            />
-            <input
-              type="number"
-              placeholder="Max"
-              className="w-1/2 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
-              value={filters.maxPrice}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, maxPrice: e.target.value }))
-              }
-            />
+              {/* Price */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Price range ($)
+                </label>
+                <div className="mt-1 flex gap-3">
+                  <input
+                    type="number"
+                    placeholder="Min"
+                    className="w-1/2 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
+                    value={filters.minPrice}
+                    onChange={(e) =>
+                      setFilters((prev) => ({ ...prev, minPrice: e.target.value }))
+                    }
+                  />
+                  <input
+                    type="number"
+                    placeholder="Max"
+                    className="w-1/2 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
+                    value={filters.maxPrice}
+                    onChange={(e) =>
+                      setFilters((prev) => ({ ...prev, maxPrice: e.target.value }))
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* Condition */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Condition
+                </label>
+                <select
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  value={filters.condition}
+                  onChange={(e) =>
+                    setFilters((prev) => ({ ...prev, condition: e.target.value }))
+                  }
+                >
+                  <option value="used">Used</option>
+                  <option value="new">New</option>
+                  <option value="new without tags">New without tags</option>
+                  <option value="Used - like new">Used - like new</option>
+                </select>
+              </div>
+
+              {/* Date posted */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Date posted
+                </label>
+                <select
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  value={filters.datePosted}
+                  onChange={(e) =>
+                    setFilters((prev) => ({ ...prev, datePosted: e.target.value }))
+                  }
+                >
+                  <option value="any">Any time</option>
+                  <option value="24h">Last 24 hours</option>
+                  <option value="3d">Last 3 days</option>
+                  <option value="7d">Last week</option>
+                  <option value="30d">Last month</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                onClick={() => {
+                  setFilters({
+                    distance: "any",
+                    minPrice: "",
+                    maxPrice: "",
+                    condition: "any",
+                    datePosted: "any",
+                  });
+                  setCurrentPage(1);
+                }}
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentPage(1);
+                  setIsFilterOpen(false);
+                }}
+                className="rounded-lg bg-[#395A7F] px-4 py-2 text-sm font-medium text-white hover:bg-[#A3CAE9]"
+              >
+                Apply filters
+              </button>
+            </div>
           </div>
         </div>
-
-        {/* Condition */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Condition
-          </label>
-          <select
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
-            value={filters.condition}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, condition: e.target.value }))
-            }
-          >
-            <option value="used">Used</option>
-            <option value="new">New</option>
-            <option value="new without tags">New without tags</option>
-            <option value="Used - like new">Used - like new</option>
-          </select>
-        </div>
-
-        {/* Date posted */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Date posted
-          </label>
-          <select
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
-            value={filters.datePosted}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, datePosted: e.target.value }))
-            }
-          >
-            <option value="any">Any time</option>
-            <option value="24h">Last 24 hours</option>
-            <option value="3d">Last 3 days</option>
-            <option value="7d">Last week</option>
-            <option value="30d">Last month</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="mt-6 flex justify-end gap-3">
-        <button
-          type="button"
-          className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-          onClick={() => {
-            setFilters({
-              distance: "any",
-              minPrice: "",
-              maxPrice: "",
-              condition: "any",
-              datePosted: "any",
-            });
-            setCurrentPage(1);
-          }}
-        >
-          Clear
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setCurrentPage(1); // reset to first page when filters change
-            setIsFilterOpen(false);
-          }}
-          className="rounded-lg bg-[#395A7F] px-4 py-2 text-sm font-medium text-white hover:bg-[#A3CAE9]"
-        >
-          Apply filters
-        </button>
-      </div>
+      )}
     </div>
-  </div>
-)}
-</div>
   );
 }
 
