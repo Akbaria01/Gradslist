@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { doc, getDoc, collection, query, where, getDocs, deleteDoc } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs, deleteDoc, updateDoc } from "firebase/firestore";
 import { db, app } from "../firebase";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import Modal from "../components/Modal";
@@ -15,6 +15,7 @@ export default function Profile() {
   const [profileName, setProfileName] = useState("User");
   const [profileEmail, setProfileEmail] = useState("");
   const [profileRating, setProfileRating] = useState(0);
+  const [ratingCount, setRatingCount] = useState(0);
   const [profilePic, setProfilePic] = useState("");
   const [imagePreview, setImagePreview] = useState("");
   const [pfpUploading, setPfpUploading] = useState(false);
@@ -35,6 +36,48 @@ export default function Profile() {
     };
   }, [imagePreview]);
   
+  // Function to fetch user rating from reviews - UPDATED TO MATCH VIEWPROFILE
+  const fetchUserRating = async () => {
+    if (!currentUser) return;
+
+    try {
+      // Query reviews where this user is the reviewed user (not seller)
+      const reviewsRef = collection(db, "reviews");
+      const q = query(reviewsRef, where("reviewedUserId", "==", currentUser.uid));
+      const querySnapshot = await getDocs(q);
+
+      let totalStars = 0;
+      let reviewCount = 0;
+
+      querySnapshot.forEach((doc) => {
+        const review = doc.data();
+        if (review.rating && typeof review.rating === 'number') {
+          totalStars += review.rating;
+          reviewCount++;
+        }
+      });
+
+      const averageRating = reviewCount > 0 ? (totalStars / reviewCount) : 0;
+
+      // Update user document with new rating data
+      const userRef = doc(db, "users", currentUser.uid);
+      await updateDoc(userRef, {
+        rating: {
+          average: averageRating,
+          count: reviewCount,
+          totalStars: totalStars
+        }
+      });
+
+      // Update local state
+      setProfileRating(averageRating);
+      setRatingCount(reviewCount);
+
+    } catch (error) {
+      console.error("Error fetching user rating:", error);
+    }
+  };
+
   // Load user data from Firestore "users" collection
   useEffect(() => {
     const loadUserProfile = async () => {
@@ -50,21 +93,36 @@ export default function Profile() {
           setProfileEmail(data.email || currentUser.email || "");
           setProfilePic(data.profilePic || "");
           setImagePreview(data.profilePic || "");
+          
+          // Load rating data from user document
+          if (data.rating) {
+            setProfileRating(data.rating.average || 0);
+            setRatingCount(data.rating.count || 0);
+          } else {
+            // If no rating data exists, initialize it
+            setProfileRating(0);
+            setRatingCount(0);
+          }
         } else {
           // fallback to auth info if no doc
           setProfileName(currentUser.displayName || "User");
           setProfileEmail(currentUser.email || "");
           setProfilePic("");
           setImagePreview("");
+          setProfileRating(0);
+          setRatingCount(0);
         }
       } catch (err) {
         console.error("Failed to load user profile:", err);
         setProfileName(currentUser.displayName || "User");
         setProfileEmail(currentUser.email || "");
+        setProfileRating(0);
+        setRatingCount(0);
       }
     };
 
     loadUserProfile();
+    fetchUserRating(); // Fetch rating from reviews
   }, [currentUser]);
 
   // Fetch user's listings for the "My Listings" section
@@ -251,7 +309,7 @@ export default function Profile() {
     name: profileName,
     email: profileEmail,
     profilePic: imagePreview || profilePic,
-    ratingCount: 0,
+    ratingCount: ratingCount,
   };
 
   const buttonStyle = "bg-[#2E4C6E] hover:bg-[#243c58] text-white";
@@ -260,15 +318,15 @@ export default function Profile() {
     navigate("/listing/create");
   };
 
-  const renderStars = (ratingValue = 4) => {
+  const renderSimpleStars = () => {
     const stars = [];
+    const fullStars = Math.floor(profileRating);
+    
     for (let i = 1; i <= 5; i++) {
       stars.push(
         <span
           key={i}
-          className={`text-xl ${
-            i <= ratingValue ? "text-yellow-400" : "text-gray-300"
-          }`}
+          className={`text-xl ${i <= fullStars ? "text-yellow-400" : "text-gray-300"}`}
         >
           ★
         </span>
@@ -456,7 +514,7 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Rating Box */}
+        {/* Rating Box - Now shows same rating as ViewProfile */}
         <div
           className="flex flex-col justify-center items-center bg-white p-4 rounded-xl shadow-sm border border-gray-200"
           style={{ width: "260px", height: "100px" }}
@@ -465,9 +523,9 @@ export default function Profile() {
             Your Profile Rating
           </p>
           <div className="flex items-center mt-1">
-            {renderStars()}
+            {renderSimpleStars()}
             <span className="ml-2 text-sm text-gray-600">
-              {profileRating} ({user.ratingCount})
+              {profileRating > 0 ? profileRating.toFixed(1) : "0.0"} ({ratingCount} {ratingCount === 1 ? 'review' : 'reviews'})
             </span>
           </div>
         </div>
