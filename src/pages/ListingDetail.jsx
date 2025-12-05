@@ -354,11 +354,12 @@ useEffect(() => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left column: image + details */}
           <div>
-            <div className="w-full rounded-lg overflow-hidden bg-gray-100">
+            <div className="relative w-full max-w-[600px] h-[350px] sm:h-[420px] md:h-[480px] overflow-hidden rounded-lg">
               <img
                 src={listing.image}
                 alt={title}
-                className="w-full h-[480px] object-cover"
+                className="w-full h-full object-cover object-center"
+                style={{ objectFit: "fill" }}
               />
             </div>
 
