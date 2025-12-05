@@ -390,25 +390,19 @@ useEffect(() => {
           <aside>
             {/* Seller card section */}
             <div className="bg-white p-6 rounded-xl shadow-sm flex flex-col items-center">
-  {sellerProfilePic ? (
-    <img
-      src={sellerProfilePic}
-      alt={sellerName}
-      className="w-24 h-24 rounded-full object-cover mb-4"
-    />
-  ) : (
-    <div className="w-24 h-24 rounded-full bg-gray-200 mb-4 flex items-center justify-center text-lg font-semibold text-gray-500">
-      {sellerName?.charAt(0).toUpperCase()}
-    </div>
-  )}
+              {sellerProfilePic ? (
+                <img
+                  src={sellerProfilePic}
+                  alt={sellerName}
+                  className="w-24 h-24 rounded-full object-cover mb-4"
+                />
+               ) : (
+                <div className="w-24 h-24 rounded-full bg-gray-200 mb-4 flex items-center justify-center text-lg font-semibold text-gray-500">
+                {sellerName?.charAt(0).toUpperCase()}
+                </div>
+              )}
 
-  <div className="text-lg font-semibold text-gray-900">{sellerName}</div>
-  <div className="mt-2 flex">{renderStars(4)}</div>
-  <div className="mt-2 text-sm text-gray-500">(4.0)</div>
-  <div className="mt-2 text-sm text-gray-600">Items sold: {itemsSold}</div>
-</div>
-
-              <div className="w-24 h-24 rounded-full bg-gray-200 mb-4" />
+        
               <div className="text-lg font-semibold text-gray-900">{sellerName}</div>
               <div className="mt-2 flex">{renderStars(4)}</div>
               <div className="mt-2 text-sm text-gray-500">(4.0)</div>

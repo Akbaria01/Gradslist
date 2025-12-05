@@ -279,21 +279,45 @@ export default function ViewProfile() {
         {/* Left Column: Profile Picture + Log Out */}
         <div className="flex flex-col items-center">
           {/* Profile image / placeholder */}
-          <div className="relative w-56 h-56 mb-4">
-  <img
-    src={imagePreview || profileData.profilePic || "/placeholder.png"}
-    alt="Profile"
-    className="w-full h-full rounded-full object-cover shadow-lg"
-  />
+          <div className="relative mb-4">
+            {isOwnProfile ? (
+            <label className="block cursor-pointer">
+              {imagePreview || profileData.profilePic ? (
+                <img
+                  src={imagePreview || profileData.profilePic}
+                  alt="Profile"
+                  className="w-56 h-56 rounded-full object-cover shadow-lg"
+                />
+              ) : (
+                <div className="w-56 h-56 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-2xl shadow-lg">
+                  No Photo
+                </div>
+              )}
 
-  {/* Invisible input covers the whole image */}
-  <input
-    type="file"
-    accept="image/*"
-    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-    onChange={handleImageChange}
-  />
-</div>
+              {/* Hidden input that triggers on click */}
+              <input
+                id="profilePicInput"
+                type="file"
+                accept="image/png,image/jpeg"
+                className="hidden"
+                onChange={handleImageChange}
+              />
+            </label>
+            ) : (
+              <>
+                {profileData.profilePic ? (
+                <img
+                  src={profileData.profilePic}
+                  alt="Profile"
+                  className="w-56 h-56 rounded-full object-cover shadow-lg"
+                />
+              ) : (
+                <div className="w-56 h-56 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-2xl shadow-lg">
+                  No Photo
+                </div>
+              )}
+              </>
+            )}
 
           </div>
           {isOwnProfile && (
