@@ -27,6 +27,8 @@ export default function ViewProfile() {
 
   const uid = paramUid || currentUser?.uid;
 
+  const isOwnProfile = uid === currentUser?.uid;
+
   const [profileData, setProfileData] = useState({
     name: "User",
     email: "",
@@ -277,13 +279,14 @@ export default function ViewProfile() {
               />
             </label>
           </div>
-
-          <button
-            onClick={handleLogOut}
-            className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg font-semibold text-lg"
-          >
-            Log Out
-          </button>
+          {isOwnProfile && (
+            <button
+              onClick={handleLogOut}
+              className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg font-semibold text-lg"
+            >
+              Log Out
+            </button>
+          )}
         </div>
 
         {/* Right Column: User Info + Reviews */}
@@ -297,7 +300,7 @@ export default function ViewProfile() {
               <h2 className="text-2xl font-semibold text-gray-900">
                 Profile Information
               </h2>
-              {!editing ? (
+              {isOwnProfile && !editing ? (
                 <button
                   type="button"
                   onClick={handleStartEdit}
@@ -305,7 +308,7 @@ export default function ViewProfile() {
                 >
                   Edit Profile
                 </button>
-              ) : (
+              ) : isOwnProfile && editing ? (
                 <div className="flex gap-3">
                   <button
                     type="button"
@@ -323,7 +326,7 @@ export default function ViewProfile() {
                     {saving ? "Saving…" : "Save Changes"}
                   </button>
                 </div>
-              )}
+              ) : null}
             </div>
 
             {error && (
@@ -340,7 +343,7 @@ export default function ViewProfile() {
             {/* Name */}
             <div className="flex flex-col sm:flex-row items-center gap-6">
               <p className="text-xl font-bold text-gray-900 w-24">Name:</p>
-              {editing ? (
+              {isOwnProfile && editing ? (
                 <input
                   type="text"
                   value={profileData.name}
@@ -363,7 +366,7 @@ export default function ViewProfile() {
             {/* Email */}
             <div className="flex flex-col sm:flex-row items-center gap-6">
               <p className="text-xl font-bold text-gray-900 w-24">Email:</p>
-              {editing ? (
+              { isOwnProfile && editing ? (
                 <input
                   type="email"
                   value={profileData.email}
@@ -386,7 +389,7 @@ export default function ViewProfile() {
             {/* Phone (optional) */}
             <div className="flex flex-col sm:flex-row items-center gap-6">
               <p className="text-xl font-bold text-gray-900 w-24">Phone:</p>
-              {editing ? (
+              {isOwnProfile && editing ? (
                 <input
                   type="tel"
                   value={profileData.phone}
