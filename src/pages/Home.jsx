@@ -83,12 +83,42 @@ const CATEGORY_OPTIONS = {
   ],
 };
 
+// Great-circle distance between two coords in miles
+function haversineMiles(lat1, lon1, lat2, lon2) {
+  if (
+    typeof lat1 !== "number" ||
+    typeof lon1 !== "number" ||
+    typeof lat2 !== "number" ||
+    typeof lon2 !== "number"
+  ) {
+    return null;
+  }
+
+  const R = 3958.8; // Radius of Earth in miles
+  const toRad = (deg) => (deg * Math.PI) / 180;
+
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+
 export default function Home() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [activeCategory, setActiveCategory] = useState(null);
   const [selectedFilter, setSelectedFilter] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [userLocation, setUserLocation] = useState(null); // { lat, lng } or null
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -104,6 +134,32 @@ export default function Home() {
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);
+
+    // Ask browser for current location (once on mount)
+    useEffect(() => {
+      if (!navigator.geolocation) {
+        console.warn("Geolocation not supported in this browser.");
+        return;
+      }
+  
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUserLocation({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+          });
+        },
+        (err) => {
+          console.warn("Geolocation error:", err);
+          // If user denies permission, we just leave userLocation = null and show N/A
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+        }
+      );
+    }, []);
+  
 
   const [products, setProducts] = useState([]); // from Firestore
   const itemsPerPage = 12;
@@ -361,6 +417,51 @@ export default function Home() {
           return false;
         }
       }
+  
+           // ---- DISTANCE filter ----
+           if (filters.distance !== "any") {
+            let distNum = null;
+    
+            // 1) Try real GPS distance using coords
+            const coords = p._raw?.locationCoords;
+            if (
+              userLocation &&
+              coords &&
+              typeof coords.lat === "number" &&
+              typeof coords.lng === "number"
+            ) {
+              const d = haversineMiles(
+                userLocation.lat,
+                userLocation.lng,
+                coords.lat,
+                coords.lng
+              );
+              if (!Number.isNaN(d)) {
+                distNum = d;
+              }
+            } else {
+              // 2) Fallback: use stored distance field if present
+              const rawDistance = p._raw?.distance ?? p.distance ?? null;
+              if (rawDistance !== null && rawDistance !== "") {
+                distNum =
+                  typeof rawDistance === "number"
+                    ? rawDistance
+                    : Number(String(rawDistance).replace(/[^0-9.]/g, ""));
+              }
+            }
+    
+            const maxMiles = Number(filters.distance); // "1", "3", "5"
+    
+            if (
+              distNum !== null &&
+              !Number.isNaN(distNum) &&
+              distNum > maxMiles
+            ) {
+              return false;
+            }
+          }
+    
+  
       // ---- DATE POSTED filter ----
       if (filters.datePosted !== "any") {
         const raw = p._raw || {};
@@ -380,7 +481,8 @@ export default function Home() {
   
       return true;
     });
-  }, [products, filters]);
+  }, [products, filters, userLocation]);
+  
   
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage));
@@ -410,8 +512,7 @@ export default function Home() {
     filteredProducts.forEach((p) => {
       const id = p.id || JSON.stringify(p).slice(0, 8);
       const rating = Math.floor(Math.random() * 3) + 3; // 3..5
-      const distance = (Math.random() * 5 + 1).toFixed(1); // 1.0..6.0
-      map[id] = { rating, distance };
+      map[id] = { rating };
     });
     return map;
   }, [filteredProducts]);
@@ -608,7 +709,33 @@ function formatPosted(product) {
               {/* Listing cards */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 px-4 lg:px-6">
           {currentProducts.map((product) => {
-            const meta = randomMeta[product.id] || { rating: "4.6", distance: "2.3" };
+            const meta = randomMeta[product.id] || { rating: "4.6" };
+
+            let distanceMiles = null;
+            const coords = product._raw?.locationCoords;
+
+            if (
+              userLocation &&
+              coords &&
+              typeof coords.lat === "number" &&
+              typeof coords.lng === "number"
+            ) {
+              const d = haversineMiles(
+                userLocation.lat,
+                userLocation.lng,
+                coords.lat,
+                coords.lng
+              );
+              if (!Number.isNaN(d)) {
+                distanceMiles = d.toFixed(1); // e.g., "2.3"
+              }
+            } else {
+              // fallback to stored distance
+              const stored = product._raw?.distance ?? product.distance ?? null;
+              if (stored !== null && stored !== "") {
+                distanceMiles = stored;
+              }
+            }
 
             const sellerName =
               product.seller ||
@@ -688,7 +815,14 @@ function formatPosted(product) {
             {/* Bottom block: uniform placement */}
             <div className="pt-2">
               <div className="text-xs text-gray-500">Posted {formatPosted(product)}</div>
-               <div className="mt-1 text-xs text-gray-500">Distance: {meta.distance} mi</div> 
+               {/* <div className="mt-1 text-xs text-gray-500">Distance: {meta.distance} mi</div>  */}
+            <div className="mt-1 text-xs text-gray-500">
+              Distance:{" "}
+              {distanceMiles !== null && distanceMiles !== ""
+                ? `${distanceMiles} mi`
+                : "N/A"}
+            </div>
+
               <div className="mt-3">
                 <button
                   onClick={() => {
