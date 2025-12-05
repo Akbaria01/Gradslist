@@ -798,11 +798,11 @@ export default function Home() {
                {/* Image left, info right on larger screens */}
               <div className="flex flex-col md:flex-row gap-4 h-full items-stretch">
                 {/* Image: force full height so row children match */}
-                <div className="md:w-1/2 w-full overflow-hidden rounded-lg bg-gray-100 h-[220px] md:h-full">
+                <div className="relative w-full md:w-1/2 h-[220px] md:h-[220px] overflow-hidden rounded-lg bg-gray-100">
                   <img
                     src={product.image}
                     alt={product.alt}
-                    className="h-full w-full object-cover transition group-hover:scale-105"
+                    className="w-full h-full object-cover"
                 />
                 </div>
 
@@ -837,7 +837,7 @@ export default function Home() {
                       : "N/A"}
                   </div>
                     
-                    <div className="mt-auto pt-3">
+                    <div className="pt-3 mt-8">
                       <button
                         onClick={() => {
                           const payload = product._raw
