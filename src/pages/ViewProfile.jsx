@@ -304,7 +304,7 @@ export default function ViewProfile() {
           Back
         </button>
         <h1 className="text-4xl font-bold text-gray-900 text-center flex-1">
-          My Account
+          {isOwnProfile ? "My Account" : `${profileData.name}'s Account`}
         </h1>
       </div>
 
@@ -509,7 +509,7 @@ export default function ViewProfile() {
               </span>
             </div>
             <h2 className="text-2xl font-semibold text-gray-900 mt-4 mb-6">
-              Reviews About You
+              {isOwnProfile ? "Reviews About You" : `Reviews About ${profileData.name}`}
             </h2>
             
             <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2">
